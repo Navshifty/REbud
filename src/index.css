@@ -1,1 +1,37 @@
 @import "tailwindcss";
+
+/*
+  REbud design tokens.
+  Mirrors src/styles/tokens.js so the same palette is available as
+  Tailwind utilities (e.g. bg-ink, text-cream, border-line).
+*/
+@theme {
+  --color-ink: #1c2b45;
+  --color-ink-soft: #35507a;
+  --color-cream: #f3eee3;
+  --color-cream-dim: #eae3d2;
+  --color-black: #17160f;
+  --color-line: #d8d2c2;
+  --color-soft-blue: #e4ebf3;
+  --color-soft-blue-line: #c7d5e6;
+  --color-warn: #a3492b;
+  --color-ok: #4b6b4a;
+
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-sans: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-black);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
