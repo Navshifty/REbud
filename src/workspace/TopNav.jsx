@@ -3,7 +3,7 @@ import { Bell, ChevronDown, FolderOpen, Search, Settings } from "lucide-react";
 import { T, serif, sans } from "../styles/tokens";
 
 /* Workspace header: brand, project switcher, global search, notifications, avatar. */
-export default function TopNav({ project, projects, onSelectProject, go, userInitials = "NK" }) {
+export default function TopNav({ project, projects, onSelectProject, go, query = "", onQueryChange, userInitials = "NK" }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -60,8 +60,10 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
           <Search size={14} style={{ color: T.black, opacity: 0.4 }} aria-hidden="true" />
           <input
             type="search"
-            aria-label="Search projects, papers, findings"
-            placeholder="Search projects, papers, findings…"
+            value={query}
+            onChange={(e) => onQueryChange?.(e.target.value)}
+            aria-label="Search projects"
+            placeholder="Search projects…"
             className="w-full text-[13px] outline-none bg-transparent"
             style={{ ...sans, color: T.black }}
           />
