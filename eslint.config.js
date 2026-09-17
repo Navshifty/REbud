@@ -5,9 +5,23 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'server/node_modules', 'server/data', 'server/uploads']),
+  {
+    // Node API in server/
+    files: ['server/**/*.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: globals.node,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+    },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
   {
     files: ['**/*.{js,jsx}'],
+    ignores: ['server/**'],
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,

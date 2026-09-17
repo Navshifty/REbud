@@ -5,7 +5,9 @@ import { formatRelativeTime } from "../utils/time";
 import { T, serif, sans, mono } from "../styles/tokens";
 
 /* Main column: project header, derived stats, document upload and analysis triggers. */
-export default function CentralWorkspace({ project, summary, files, setFiles, running, onRun, onEditProject, mobileHidden = false }) {
+export default function CentralWorkspace({
+  project, summary, files, filesLoaded, onUpload, onRemoveFile, running, onRun, onEditProject, mobileHidden = false,
+}) {
   const hasFiles = files.length > 0;
   const stats = [
     ["Documents", summary.fileCount],
@@ -54,7 +56,7 @@ export default function CentralWorkspace({ project, summary, files, setFiles, ru
           ))}
         </dl>
 
-        <DocumentUpload files={files} setFiles={setFiles} />
+        <DocumentUpload files={files} filesLoaded={filesLoaded} onUpload={onUpload} onRemove={onRemoveFile} />
         <AnalysisActions hasFiles={hasFiles} running={running} onRun={onRun} />
       </div>
     </main>

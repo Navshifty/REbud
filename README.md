@@ -13,13 +13,12 @@ inferences**, so speculative output is never presented as fact.
 
 ## Status
 
-Phase 2 (frontend functionality) — the workspace is interactive on mock
-data: projects can be created, edited, archived and deleted; documents
-are validated and (mock) processed per project; each analysis module has
-idle, running, error and done states per project; the layout adapts to
-phones. Authentication, uploads, analysis and chat are still simulated in
-the browser via `src/services`; the backend and AI pipeline come in
-later phases.
+Phase 3 (backend API) — the frontend talks to a Node/Express API in
+`server/` for authentication (JWT), projects, document upload and
+storage, analysis jobs and chat. Analysis and chat results are still
+canned on the server; the research-intelligence pipeline that generates
+them from document text is Phase 4. Without `VITE_API_URL` the frontend
+runs on an in-browser mock backend, so the UI stays usable on its own.
 
 ## Tech stack
 
@@ -28,17 +27,57 @@ later phases.
 - Tailwind CSS v4 via PostCSS
 - lucide-react icons
 - ESLint
+- API: Node 20+, Express 5, JSON Web Tokens, bcryptjs, multer (in `server/`)
 
 ## Getting started
+
+**Frontend** (from the repo root):
 
 ```bash
 npm install
 npm run dev
 ```
 
-Other scripts: `npm run build`, `npm run preview`, `npm run lint`.
+Other scripts: `npm run build`, `npm run preview`, `npm run lint`
+(lint covers `server/` too).
 
-Demo login: any valid email with the password `correcthorse`.
+**API** (in a second terminal):
+
+```bash
+cd server
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Then point the frontend at it: copy `.env.example` to `.env` in the repo
+root (it sets `VITE_API_URL=http://localhost:4000/api`) and restart
+`npm run dev`. Create an account on the signup page; passwords need 8+
+characters with upper, lower and special characters.
+
+**Mock mode** — leave the root `.env` out and the frontend runs entirely
+in the browser on sample data. Demo login: any valid email with the
+password `correcthorse`.
+
+### API overview
+
+All routes are under `/api`; everything except `/auth/*` and `/health`
+needs `Authorization: Bearer <token>`.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| POST | `/auth/signup`, `/auth/login` | Create an account / log in → `{ token, user }` |
+| GET | `/auth/me` | Current user |
+| GET, POST | `/projects` | List (with derived `summary`) / create |
+| GET, PATCH, DELETE | `/projects/:id` | Read / update name, objective, archived / delete |
+| GET, POST | `/projects/:id/documents` | List / upload (`files[]`, multipart) |
+| DELETE | `/projects/:id/documents/:docId` | Remove a document |
+| GET, POST | `/projects/:id/analysis` | Module states / start modules (202, then poll) |
+| POST | `/projects/:id/chat` | `{ topic?, messages }` → assistant reply |
+
+Persistence is a JSON-file store under `server/data/` and uploads live in
+`server/uploads/` (both git-ignored). A database replaces the store in
+Phase 5 without touching routes or services.
 
 ## Project structure
 
@@ -54,8 +93,21 @@ src/
 │   ├── state/    # workspaceReducer + useWorkspace hook (projects, files, analysis)
 │   └── sections/ # Analysis modules: Overview, Gaps, Novelty, Critique,
 │                 # Relevance, Related, Suggestions
-├── App.jsx       # View switcher
+├── App.jsx       # View switcher + session handling
 └── main.jsx      # Entry point
+
+server/
+├── src/
+│   ├── app.js          # Express app (CORS, JSON, routes, error handling)
+│   ├── index.js        # Entry point
+│   ├── config.js       # Environment config (.env)
+│   ├── lib/            # JSON-file store, HTTP error helpers
+│   ├── middleware/     # requireAuth (JWT), loadProject (ownership), errors
+│   ├── routes/         # auth, projects, documents, analysis, chat
+│   ├── services/       # Business logic behind each route group
+│   └── data/           # Canned analysis/chat content (until Phase 4)
+├── data/               # JSON store (git-ignored)
+└── uploads/            # Stored documents (git-ignored)
 ```
 
 ### Design system
@@ -78,8 +130,8 @@ for numbers.
 1. **Frontend architecture** — refactor the prototype into components. ✅
 2. **Frontend functionality** — project management, per-project file and
    analysis state, loading/empty/error states, phone layout. ✅
-3. **Backend API** — auth, projects, document upload/parsing, analysis
-   endpoints, chat.
+3. **Backend API** — JWT auth, projects, document upload/storage,
+   analysis job endpoints, chat; frontend wired with a mock fallback. ✅
 4. **Research intelligence** — extraction, chunking, embeddings and
    retrieval, structured LLM analysis with citation tracking.
 5. **Production engineering** — database, OAuth, security, tests,
