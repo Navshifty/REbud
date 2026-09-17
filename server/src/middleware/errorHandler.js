@@ -6,8 +6,8 @@ export function notFoundHandler(req, res) {
   res.status(404).json({ error: { message: `No route for ${req.method} ${req.originalUrl}` } });
 }
 
-/** Central error → JSON translator. Express 5 forwards async rejections here. */
-// eslint-disable-next-line no-unused-vars
+/** Central error → JSON translator. Express 5 forwards async rejections here.
+    The 4-argument signature is what marks this as error middleware. */
 export function errorHandler(err, req, res, _next) {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: { message: err.message, details: err.details } });
