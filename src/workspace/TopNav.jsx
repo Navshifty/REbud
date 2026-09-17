@@ -33,7 +33,7 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
             style={{ borderColor: T.line, ...sans, color: T.black }}
           >
             <FolderOpen size={14} style={{ color: T.inkSoft }} aria-hidden="true" />
-            <span className="truncate">{project.name}</span>
+            <span className="truncate">{project?.name ?? "No project"}</span>
             <ChevronDown size={13} aria-hidden="true" />
           </button>
           {open && (
@@ -42,10 +42,10 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
                 <li
                   key={p.id}
                   role="option"
-                  aria-selected={p.id === project.id}
+                  aria-selected={p.id === project?.id}
                   onClick={() => { onSelectProject(p.id); setOpen(false); }}
                   className="px-3.5 py-2.5 text-[13px] cursor-pointer hover:bg-cream"
-                  style={{ ...sans, color: T.black, fontWeight: p.id === project.id ? 600 : 400 }}
+                  style={{ ...sans, color: T.black, fontWeight: p.id === project?.id ? 600 : 400 }}
                 >
                   {p.name}
                 </li>

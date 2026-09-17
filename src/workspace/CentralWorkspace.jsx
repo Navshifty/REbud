@@ -1,21 +1,22 @@
 import DocumentUpload from "./DocumentUpload";
 import AnalysisActions from "./AnalysisActions";
+import { formatRelativeTime } from "../utils/time";
 import { T, serif, sans, mono } from "../styles/tokens";
 
-/* Main column: project header, stats, document upload and analysis triggers. */
-export default function CentralWorkspace({ project, files, setFiles, running, onRun }) {
+/* Main column: project header, derived stats, document upload and analysis triggers. */
+export default function CentralWorkspace({ project, summary, files, setFiles, running, onRun }) {
   const hasFiles = files.length > 0;
   const stats = [
-    ["Documents", files.length],
-    ["Gaps identified", project.gaps],
-    ["Last analysis", project.lastAnalysis],
+    ["Documents", summary.fileCount],
+    ["Gaps identified", summary.gapCount],
+    ["Last analysis", formatRelativeTime(summary.lastAnalysisAt)],
   ];
 
   return (
     <main className="flex-1 min-w-0 overflow-y-auto px-5 md:px-8 py-7" style={{ background: T.cream }}>
       <div className="max-w-[760px]">
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-[11px] px-2 py-[3px] border" style={{ borderColor: T.line, ...sans, color: T.black, opacity: 0.6 }}>{project.status}</span>
+          <span className="text-[11px] px-2 py-[3px] border" style={{ borderColor: T.line, ...sans, color: T.black, opacity: 0.6 }}>{summary.status}</span>
         </div>
         <h1 className="text-[24px] mb-1.5" style={{ ...serif, color: T.black }}>{project.name}</h1>
         <p className="text-[13.5px] mb-5 leading-relaxed" style={{ ...sans, color: T.black, opacity: 0.65 }}>

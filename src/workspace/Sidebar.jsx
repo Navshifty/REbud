@@ -9,7 +9,7 @@ const PROJECT_MENU = [
 ];
 
 /* Left rail listing the user's research projects. */
-export default function Sidebar({ projects, activeId, onSelectProject, onNewProject }) {
+export default function Sidebar({ projects, summaries = {}, activeId, onSelectProject, onNewProject }) {
   const [menuFor, setMenuFor] = useState(null);
 
   return (
@@ -52,7 +52,9 @@ export default function Sidebar({ projects, activeId, onSelectProject, onNewProj
                   <MoreHorizontal size={14} style={{ color: T.black, opacity: 0.4 }} />
                 </button>
               </div>
-              <p className="text-[11.5px] mt-1" style={{ ...sans, color: T.black, opacity: 0.5 }}>{p.status} · {p.files} files</p>
+              <p className="text-[11.5px] mt-1" style={{ ...sans, color: T.black, opacity: 0.5 }}>
+                {summaries[p.id]?.status ?? "Draft"} · {summaries[p.id]?.fileCount ?? 0} files
+              </p>
               {menuFor === p.id && (
                 <div className="absolute right-2 top-9 bg-white border z-10 w-36" style={{ borderColor: T.line }} role="menu">
                   {PROJECT_MENU.map(({ label, icon: Icon }) => (
