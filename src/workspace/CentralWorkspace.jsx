@@ -5,7 +5,7 @@ import { formatRelativeTime } from "../utils/time";
 import { T, serif, sans, mono } from "../styles/tokens";
 
 /* Main column: project header, derived stats, document upload and analysis triggers. */
-export default function CentralWorkspace({ project, summary, files, setFiles, running, onRun, onEditProject }) {
+export default function CentralWorkspace({ project, summary, files, setFiles, running, onRun, onEditProject, mobileHidden = false }) {
   const hasFiles = files.length > 0;
   const stats = [
     ["Documents", summary.fileCount],
@@ -14,7 +14,10 @@ export default function CentralWorkspace({ project, summary, files, setFiles, ru
   ];
 
   return (
-    <main className="flex-1 min-w-0 overflow-y-auto px-5 md:px-8 py-7" style={{ background: T.cream }}>
+    <main
+      className={`${mobileHidden ? "hidden" : "block"} md:block flex-1 min-w-0 overflow-y-auto px-5 md:px-8 py-7 pb-20 md:pb-7`}
+      style={{ background: T.cream }}
+    >
       <div className="max-w-[760px]">
         <div className="flex items-center gap-2 mb-1.5">
           <span className="text-[11px] px-2 py-[3px] border" style={{ borderColor: T.line, ...sans, color: T.black, opacity: 0.6 }}>{summary.status}</span>

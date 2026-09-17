@@ -89,7 +89,7 @@ function SectionView({ section, data, onOpenChat }) {
   driven by its module record { status, data, error }, or a ChatPanel when
   a discussion is open. `chat` is a CHAT_TOPICS entry or null.
 */
-export default function RightPanel({ section, onSelectSection, analysis, hasFiles, onRetry, chat, onOpenChat, onCloseChat }) {
+export default function RightPanel({ section, onSelectSection, analysis, hasFiles, onRetry, chat, onOpenChat, onCloseChat, mobileVisible = false }) {
   const module = analysis?.[section] ?? { status: "idle" };
 
   function renderBody() {
@@ -101,7 +101,11 @@ export default function RightPanel({ section, onSelectSection, analysis, hasFile
   }
 
   return (
-    <aside className="w-full md:w-[380px] border-l bg-white shrink-0 flex flex-col" style={{ borderColor: T.line }} aria-label="Research intelligence">
+    <aside
+      className={`${mobileVisible ? "flex" : "hidden"} md:flex w-full md:w-[380px] min-h-0 flex-1 md:flex-none border-l bg-white shrink-0 flex-col pb-12 md:pb-0`}
+      style={{ borderColor: T.line }}
+      aria-label="Research intelligence"
+    >
       {chat ? (
         <ChatPanel key={chat.title} title={chat.title} seed={chat.seed} followups={chat.followups} onClose={onCloseChat} />
       ) : (

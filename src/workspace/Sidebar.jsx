@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, ChevronDown, ChevronRight, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronDown, ChevronRight, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { T, sans } from "../styles/tokens";
 
 function ProjectRow({ project, summary, active, onSelect, actions }) {
@@ -67,7 +67,7 @@ function ProjectRow({ project, summary, active, onSelect, actions }) {
   ones live in a collapsible group. `query` filters by name.
 */
 export default function Sidebar({
-  projects, summaries = {}, activeId, query = "",
+  projects, summaries = {}, activeId, query = "", mobileOpen = false, onCloseMobile,
   onSelectProject, onNewProject, onEditProject, onArchiveProject, onDeleteProject,
 }) {
   const [showArchived, setShowArchived] = useState(false);
@@ -88,9 +88,27 @@ export default function Sidebar({
       ];
 
   return (
-    <aside className="w-64 border-r bg-white shrink-0 hidden md:flex flex-col" style={{ borderColor: T.line }} aria-label="Projects">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          style={{ background: "rgba(23, 22, 15, 0.45)" }}
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`${mobileOpen ? "flex fixed inset-y-0 left-0 z-40 shadow-xl" : "hidden"} md:static md:flex md:shadow-none w-64 border-r bg-white shrink-0 flex-col`}
+        style={{ borderColor: T.line }}
+        aria-label="Projects"
+      >
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <span className="text-[13px] uppercase tracking-wide" style={{ ...sans, color: T.black, opacity: 0.45 }}>Projects</span>
+        {mobileOpen && (
+          <button type="button" aria-label="Close projects" onClick={onCloseMobile} className="md:hidden">
+            <X size={16} style={{ color: T.black, opacity: 0.5 }} />
+          </button>
+        )}
       </div>
       <div className="px-3 pb-3">
         <button
@@ -144,6 +162,7 @@ export default function Sidebar({
           </div>
         )}
       </nav>
-    </aside>
+      </aside>
+    </>
   );
 }

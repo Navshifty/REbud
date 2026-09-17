@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, FolderOpen, Search, Settings } from "lucide-react";
+import { Bell, ChevronDown, FolderOpen, Menu, Search, Settings } from "lucide-react";
 import { T, serif, sans } from "../styles/tokens";
 
 /* Workspace header: brand, project switcher, global search, notifications, avatar. */
-export default function TopNav({ project, projects, onSelectProject, go, query = "", onQueryChange, userInitials = "NK" }) {
+export default function TopNav({ project, projects, onSelectProject, go, query = "", onQueryChange, onToggleSidebar, userInitials = "NK" }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -19,7 +19,12 @@ export default function TopNav({ project, projects, onSelectProject, go, query =
 
   return (
     <header className="h-14 flex items-center justify-between px-4 md:px-5 border-b bg-white shrink-0" style={{ borderColor: T.line }}>
-      <div className="flex items-center gap-4 md:gap-6 min-w-0">
+      <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        {onToggleSidebar && (
+          <button type="button" aria-label="Open projects" onClick={onToggleSidebar} className="md:hidden">
+            <Menu size={18} style={{ color: T.black, opacity: 0.7 }} />
+          </button>
+        )}
         <button type="button" className="text-[17px] cursor-pointer" style={{ ...serif, color: T.ink }} onClick={() => go("landing")}>
           REbud
         </button>

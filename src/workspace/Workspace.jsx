@@ -3,6 +3,7 @@ import TopNav from "./TopNav";
 import Sidebar from "./Sidebar";
 import CentralWorkspace from "./CentralWorkspace";
 import RightPanel from "./RightPanel";
+import MobileBar from "./MobileBar";
 import ProjectDialog from "./ProjectDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Button from "../components/Button";
@@ -13,7 +14,8 @@ import { T, serif, sans } from "../styles/tokens";
 /*
   Workspace root. State and side effects live in useWorkspace; this
   component composes the layout and holds transient UI state: selected
-  tab, open chat topic, search query and which dialog is open.
+  tab, open chat topic, search query, open dialog, and the phone-only
+  layout state (sidebar drawer, which column is visible).
 
   dialog: null | { kind: "create" } | { kind: "edit", project } | { kind: "delete", project }
 */
@@ -23,17 +25,22 @@ export default function Workspace({ go }) {
   const [chatTopic, setChatTopic] = useState(null); // key into CHAT_TOPICS
   const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // phone drawer
+  const [mobileView, setMobileView] = useState("main"); // "main" | "panel"
 
   const closeDialog = () => setDialog(null);
 
   function selectProject(id) {
     ws.selectProject(id);
     setChatTopic(null);
+    setSidebarOpen(false);
+    setMobileView("main");
   }
 
   function runAction(action) {
     setSection(action.section);
     setChatTopic(null);
+    setMobileView("panel");
     ws.runModules(action.modules);
   }
 
@@ -41,6 +48,7 @@ export default function Workspace({ go }) {
     if (dialog?.kind === "edit") ws.updateProject(dialog.project.id, values);
     else ws.createProject(values);
     closeDialog();
+    setSidebarOpen(false);
   }
 
   function confirmDelete() {
@@ -71,6 +79,8 @@ export default function Workspace({ go }) {
     summaries: ws.summaries,
     activeId: ws.activeProjectId,
     query,
+    mobileOpen: sidebarOpen,
+    onCloseMobile: () => setSidebarOpen(false),
     onSelectProject: selectProject,
     onNewProject: () => setDialog({ kind: "create" }),
     onEditProject: (project) => setDialog({ kind: "edit", project }),
@@ -78,10 +88,19 @@ export default function Workspace({ go }) {
     onDeleteProject: (project) => setDialog({ kind: "delete", project }),
   };
 
+  const topNavProps = {
+    projects: ws.projects.filter((p) => !p.archived),
+    onSelectProject: selectProject,
+    go,
+    query,
+    onQueryChange: setQuery,
+    onToggleSidebar: () => setSidebarOpen((v) => !v),
+  };
+
   if (!ws.activeProject) {
     return (
       <div className="h-screen flex flex-col" style={{ ...sans }}>
-        <TopNav project={null} projects={ws.projects} onSelectProject={selectProject} go={go} query={query} onQueryChange={setQuery} />
+        <TopNav project={null} {...topNavProps} />
         <div className="flex flex-1 min-h-0">
           <Sidebar {...sidebarProps} />
           <main className="flex-1 flex flex-col items-center justify-center text-center px-6" style={{ background: T.cream }}>
@@ -99,15 +118,8 @@ export default function Workspace({ go }) {
 
   return (
     <div className="h-screen flex flex-col" style={{ ...sans }}>
-      <TopNav
-        project={ws.activeProject}
-        projects={ws.projects.filter((p) => !p.archived)}
-        onSelectProject={selectProject}
-        go={go}
-        query={query}
-        onQueryChange={setQuery}
-      />
-      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+      <TopNav project={ws.activeProject} {...topNavProps} />
+      <div className="flex flex-1 min-h-0">
         <Sidebar {...sidebarProps} />
         <CentralWorkspace
           project={ws.activeProject}
@@ -117,6 +129,7 @@ export default function Workspace({ go }) {
           running={ws.isRunning}
           onRun={runAction}
           onEditProject={() => setDialog({ kind: "edit", project: ws.activeProject })}
+          mobileHidden={mobileView === "panel"}
         />
         <RightPanel
           section={section}
@@ -127,8 +140,10 @@ export default function Workspace({ go }) {
           chat={chatTopic ? CHAT_TOPICS[chatTopic] : null}
           onOpenChat={setChatTopic}
           onCloseChat={() => setChatTopic(null)}
+          mobileVisible={mobileView === "panel"}
         />
       </div>
+      <MobileBar view={mobileView} onChange={setMobileView} busy={ws.isRunning} />
       {dialogs}
     </div>
   );
