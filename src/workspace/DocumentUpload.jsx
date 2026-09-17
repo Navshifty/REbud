@@ -1,15 +1,12 @@
 import { useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { fileIcon } from "../utils/fileIcon";
+import { ACCEPT_ATTR, processDocument, toDocumentRecord, validateFile } from "../services/documentService";
 import { MAX_FILES } from "./config";
 import { T, serif, sans, mono } from "../styles/tokens";
 
-const ACCEPT = ".pdf,.docx,.txt,.csv,.md";
-
-function formatSize(bytes) {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
+let docCounter = 0;
+const nextDocId = () => `d_${Date.now().toString(36)}_${++docCounter}`;
 
 function StatusBadge({ status }) {
   if (status === "Uploading") {
@@ -22,6 +19,13 @@ function StatusBadge({ status }) {
   if (status === "Processing") {
     return <span className="text-[11.5px]" style={{ ...sans, color: T.inkSoft }}>Processing</span>;
   }
+  if (status === "Failed") {
+    return (
+      <span className="flex items-center gap-1.5 text-[11.5px]" style={{ ...sans, color: T.warn }}>
+        <AlertTriangle size={12} aria-hidden="true" /> Failed
+      </span>
+    );
+  }
   return (
     <span className="flex items-center gap-1.5 text-[11.5px]" style={{ ...sans, color: T.ok }}>
       <CheckCircle2 size={12} aria-hidden="true" /> Processed
@@ -31,28 +35,37 @@ function StatusBadge({ status }) {
 
 /*
   Drag-and-drop document uploader plus file list for the active project.
-  Upload/processing is simulated locally; the real upload API lands in Phase 3.
+  Validation and (mock) processing are delegated to documentService.
 */
 export default function DocumentUpload({ files, setFiles }) {
   const [dragging, setDragging] = useState(false);
+  const [rejections, setRejections] = useState([]);
   const inputRef = useRef(null);
   const atLimit = files.length >= MAX_FILES;
 
   function addFiles(list) {
     if (atLimit) return;
+    const incoming = Array.from(list);
     const room = MAX_FILES - files.length;
-    const added = Array.from(list).slice(0, room).map((f, i) => ({
-      id: Date.now() + i,
-      name: f.name,
-      type: (f.name.split(".").pop() || "FILE").toUpperCase(),
-      size: formatSize(f.size),
-      status: "Uploading",
-    }));
-    setFiles((prev) => [...prev, ...added]);
-    added.forEach((a) => {
-      setTimeout(() => {
-        setFiles((prev) => prev.map((f) => (f.id === a.id ? { ...f, status: "Processed" } : f)));
-      }, 1200);
+    const accepted = [];
+    const rejected = [];
+
+    for (const f of incoming) {
+      const check = validateFile(f);
+      if (!check.ok) rejected.push(check.reason);
+      else if (accepted.length < room) accepted.push(f);
+      else rejected.push(`"${f.name}" skipped — the ${MAX_FILES}-file limit was reached.`);
+    }
+    setRejections(rejected);
+
+    const records = accepted.map((f) => toDocumentRecord(f, nextDocId()));
+    if (records.length === 0) return;
+    setFiles((prev) => [...prev, ...records]);
+
+    records.forEach((record) => {
+      processDocument(record)
+        .then((done) => setFiles((prev) => prev.map((f) => (f.id === record.id ? done : f))))
+        .catch(() => setFiles((prev) => prev.map((f) => (f.id === record.id ? { ...f, status: "Failed" } : f))));
     });
   }
 
@@ -84,12 +97,12 @@ export default function DocumentUpload({ files, setFiles }) {
         >
           <Upload size={20} style={{ color: T.inkSoft }} strokeWidth={1.5} aria-hidden="true" />
           <p className="text-[13px] mt-3" style={{ ...sans, color: T.black }}>Drag and drop files, or click to browse</p>
-          <p className="text-[11.5px] mt-1" style={{ ...sans, color: T.black, opacity: 0.5 }}>PDF, DOCX, TXT, CSV, Markdown</p>
+          <p className="text-[11.5px] mt-1" style={{ ...sans, color: T.black, opacity: 0.5 }}>PDF, DOCX, TXT, CSV, Markdown · up to 25 MB each</p>
           <input
             ref={inputRef}
             type="file"
             multiple
-            accept={ACCEPT}
+            accept={ACCEPT_ATTR}
             className="hidden"
             onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
           />
@@ -98,6 +111,21 @@ export default function DocumentUpload({ files, setFiles }) {
         <div className="border py-4 px-4 flex items-center gap-2" style={{ borderColor: T.warn, background: "#FBF1EC" }} role="alert">
           <AlertTriangle size={15} style={{ color: T.warn }} aria-hidden="true" />
           <p className="text-[13px]" style={{ ...sans, color: T.warn }}>Upload limit reached — remove a file to add another.</p>
+        </div>
+      )}
+
+      {rejections.length > 0 && (
+        <div className="mt-3 border px-4 py-3" style={{ borderColor: T.warn, background: "#FBF1EC" }} role="alert">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              {rejections.map((r, i) => (
+                <p key={i} className="text-[12.5px] leading-relaxed" style={{ ...sans, color: T.warn }}>{r}</p>
+              ))}
+            </div>
+            <button type="button" aria-label="Dismiss" onClick={() => setRejections([])}>
+              <X size={14} style={{ color: T.warn }} />
+            </button>
+          </div>
         </div>
       )}
 

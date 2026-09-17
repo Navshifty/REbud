@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, FolderOpen, Search, Settings } from "lucide-react";
+import { Bell, ChevronDown, FolderOpen, Menu, Search, Settings } from "lucide-react";
 import { T, serif, sans } from "../styles/tokens";
 
 /* Workspace header: brand, project switcher, global search, notifications, avatar. */
-export default function TopNav({ project, projects, onSelectProject, go, userInitials = "NK" }) {
+export default function TopNav({ project, projects, onSelectProject, go, query = "", onQueryChange, onToggleSidebar, userInitials = "NK" }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -19,7 +19,12 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
 
   return (
     <header className="h-14 flex items-center justify-between px-4 md:px-5 border-b bg-white shrink-0" style={{ borderColor: T.line }}>
-      <div className="flex items-center gap-4 md:gap-6 min-w-0">
+      <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        {onToggleSidebar && (
+          <button type="button" aria-label="Open projects" onClick={onToggleSidebar} className="md:hidden">
+            <Menu size={18} style={{ color: T.black, opacity: 0.7 }} />
+          </button>
+        )}
         <button type="button" className="text-[17px] cursor-pointer" style={{ ...serif, color: T.ink }} onClick={() => go("landing")}>
           REbud
         </button>
@@ -29,11 +34,11 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
             onClick={() => setOpen(!open)}
             aria-haspopup="listbox"
             aria-expanded={open}
-            className="flex items-center gap-2 px-3 py-1.5 border text-[13px] max-w-[220px]"
+            className="flex items-center gap-2 px-3 py-1.5 border text-[13px] max-w-[160px] sm:max-w-[220px]"
             style={{ borderColor: T.line, ...sans, color: T.black }}
           >
             <FolderOpen size={14} style={{ color: T.inkSoft }} aria-hidden="true" />
-            <span className="truncate">{project.name}</span>
+            <span className="truncate">{project?.name ?? "No project"}</span>
             <ChevronDown size={13} aria-hidden="true" />
           </button>
           {open && (
@@ -42,10 +47,10 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
                 <li
                   key={p.id}
                   role="option"
-                  aria-selected={p.id === project.id}
+                  aria-selected={p.id === project?.id}
                   onClick={() => { onSelectProject(p.id); setOpen(false); }}
                   className="px-3.5 py-2.5 text-[13px] cursor-pointer hover:bg-cream"
-                  style={{ ...sans, color: T.black, fontWeight: p.id === project.id ? 600 : 400 }}
+                  style={{ ...sans, color: T.black, fontWeight: p.id === project?.id ? 600 : 400 }}
                 >
                   {p.name}
                 </li>
@@ -60,17 +65,19 @@ export default function TopNav({ project, projects, onSelectProject, go, userIni
           <Search size={14} style={{ color: T.black, opacity: 0.4 }} aria-hidden="true" />
           <input
             type="search"
-            aria-label="Search projects, papers, findings"
-            placeholder="Search projects, papers, findings…"
+            value={query}
+            onChange={(e) => onQueryChange?.(e.target.value)}
+            aria-label="Search projects"
+            placeholder="Search projects…"
             className="w-full text-[13px] outline-none bg-transparent"
             style={{ ...sans, color: T.black }}
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button type="button" aria-label="Notifications"><Bell size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
-        <button type="button" aria-label="Settings"><Settings size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
+      <div className="flex items-center gap-4 shrink-0">
+        <button type="button" aria-label="Notifications" className="hidden sm:block"><Bell size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
+        <button type="button" aria-label="Settings" className="hidden sm:block"><Settings size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
         <div className="w-7 h-7 flex items-center justify-center rounded-full" style={{ background: T.ink }} aria-label="Account">
           <span className="text-[11px] text-white" style={{ ...sans }}>{userInitials}</span>
         </div>

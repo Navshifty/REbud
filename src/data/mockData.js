@@ -14,42 +14,39 @@
 /*  PROJECTS & DOCUMENTS                                                   */
 /* ---------------------------------------------------------------------- */
 
+/* Status, file count, gap count and last-analysis time are derived from
+   documents and analysis state (see workspaceReducer selectors), not stored. */
+const HOUR = 60 * 60 * 1000;
+const NOW = Date.now();
+
 export const PROJECTS = [
   {
     id: "p1",
     name: "Cortical Visual Prosthesis",
     objective: "Exploring brain-aligned visual representation learning for cortical visual prostheses.",
-    status: "In analysis",
-    files: 8,
-    gaps: 4,
-    lastAnalysis: "2 hours ago",
+    archived: false,
+    createdAt: NOW - 14 * 24 * HOUR,
   },
   {
     id: "p2",
     name: "Patient Context Intelligence",
     objective: "Modelling longitudinal patient context from ABHA health records for clinical decision support.",
-    status: "Awaiting documents",
-    files: 2,
-    gaps: 0,
-    lastAnalysis: "—",
+    archived: false,
+    createdAt: NOW - 6 * 24 * HOUR,
   },
   {
     id: "p3",
     name: "REbud Architecture",
     objective: "Formalising the evaluation methodology behind REbud's own novelty scoring engine.",
-    status: "Draft",
-    files: 5,
-    gaps: 2,
-    lastAnalysis: "1 day ago",
+    archived: false,
+    createdAt: NOW - 3 * 24 * HOUR,
   },
   {
     id: "p4",
     name: "New Research Idea",
     objective: "",
-    status: "Empty",
-    files: 0,
-    gaps: 0,
-    lastAnalysis: "—",
+    archived: false,
+    createdAt: NOW - 2 * HOUR,
   },
 ];
 
@@ -222,4 +219,27 @@ export const MOCK_ANALYSIS = {
   relevance: RELEVANCE,
   related: RELATED,
   suggestions: SUGGESTIONS,
+};
+
+/* ---------------------------------------------------------------------- */
+/*  SEEDED ANALYSIS STATE                                                  */
+/* ---------------------------------------------------------------------- */
+
+const idle = { status: "idle", data: null, error: null, updatedAt: null };
+const done = (data, updatedAt) => ({ status: "done", data, error: null, updatedAt });
+
+/* Per-project, per-module analysis state the workspace starts with, so the
+   demo has one fully analysed project, one partially analysed, and two
+   untouched. Shape matches workspaceReducer's module records. */
+export const MOCK_ANALYSIS_BY_PROJECT = {
+  p1: Object.fromEntries(Object.entries(MOCK_ANALYSIS).map(([k, v]) => [k, done(v, NOW - 2 * HOUR)])),
+  p3: {
+    overview: done(OVERVIEW, NOW - 24 * HOUR),
+    gaps: done(GAPS.slice(0, 2), NOW - 24 * HOUR),
+    novelty: idle,
+    critique: idle,
+    relevance: idle,
+    related: idle,
+    suggestions: idle,
+  },
 };
