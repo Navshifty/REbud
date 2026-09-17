@@ -13,9 +13,13 @@ inferences**, so speculative output is never presented as fact.
 
 ## Status
 
-Phase 1 (frontend architecture) — the prototype UI runs on mock data.
-Authentication, uploads, analysis and chat are simulated in the browser;
-the backend and AI pipeline come in later phases.
+Phase 2 (frontend functionality) — the workspace is interactive on mock
+data: projects can be created, edited, archived and deleted; documents
+are validated and (mock) processed per project; each analysis module has
+idle, running, error and done states per project; the layout adapts to
+phones. Authentication, uploads, analysis and chat are still simulated in
+the browser via `src/services`; the backend and AI pipeline come in
+later phases.
 
 ## Tech stack
 
@@ -43,9 +47,11 @@ src/
 ├── components/   # Reusable UI primitives (Button, Field, ScoreRing, ...)
 ├── data/         # Mock data — the future API contract
 ├── pages/        # Top-level screens: Landing, Login, Signup
+├── services/     # Async boundaries (analysis, documents) — mock today, API later
 ├── styles/       # Design tokens (palette, type stacks)
 ├── utils/        # Small helpers
-├── workspace/    # Research workspace shell (nav, sidebar, upload, panels)
+├── workspace/    # Research workspace shell (nav, sidebar, upload, panels, dialogs)
+│   ├── state/    # workspaceReducer + useWorkspace hook (projects, files, analysis)
 │   └── sections/ # Analysis modules: Overview, Gaps, Novelty, Critique,
 │                 # Relevance, Related, Suggestions
 ├── App.jsx       # View switcher
@@ -70,8 +76,8 @@ for numbers.
 ## Roadmap
 
 1. **Frontend architecture** — refactor the prototype into components. ✅
-2. **Frontend functionality** — navigation, upload/file state, loading,
-   empty and error states, responsive polish.
+2. **Frontend functionality** — project management, per-project file and
+   analysis state, loading/empty/error states, phone layout. ✅
 3. **Backend API** — auth, projects, document upload/parsing, analysis
    endpoints, chat.
 4. **Research intelligence** — extraction, chunking, embeddings and

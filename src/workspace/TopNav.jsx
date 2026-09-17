@@ -34,7 +34,7 @@ export default function TopNav({ project, projects, onSelectProject, go, query =
             onClick={() => setOpen(!open)}
             aria-haspopup="listbox"
             aria-expanded={open}
-            className="flex items-center gap-2 px-3 py-1.5 border text-[13px] max-w-[220px]"
+            className="flex items-center gap-2 px-3 py-1.5 border text-[13px] max-w-[160px] sm:max-w-[220px]"
             style={{ borderColor: T.line, ...sans, color: T.black }}
           >
             <FolderOpen size={14} style={{ color: T.inkSoft }} aria-hidden="true" />
@@ -75,9 +75,9 @@ export default function TopNav({ project, projects, onSelectProject, go, query =
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button type="button" aria-label="Notifications"><Bell size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
-        <button type="button" aria-label="Settings"><Settings size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
+      <div className="flex items-center gap-4 shrink-0">
+        <button type="button" aria-label="Notifications" className="hidden sm:block"><Bell size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
+        <button type="button" aria-label="Settings" className="hidden sm:block"><Settings size={17} style={{ color: T.black, opacity: 0.6 }} /></button>
         <div className="w-7 h-7 flex items-center justify-center rounded-full" style={{ background: T.ink }} aria-label="Account">
           <span className="text-[11px] text-white" style={{ ...sans }}>{userInitials}</span>
         </div>
