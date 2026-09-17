@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Check, Eye, EyeOff, X } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import AuthShell from "../components/AuthShell";
 import Button from "../components/Button";
 import Divider from "../components/Divider";
 import Field from "../components/Field";
 import TextInput from "../components/TextInput";
 import GoogleButton from "../components/GoogleButton";
+import * as authService from "../services/authService";
 import { T, serif, sans } from "../styles/tokens";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,13 +22,16 @@ function ReqRow({ met, label }) {
   );
 }
 
-export default function SignupPage({ go }) {
+export default function SignupPage({ go, onAuthenticated }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState(null); // { field, message }
+  const [notice, setNotice] = useState(null);
 
   const reqs = useMemo(() => ({
     length: password.length >= 8,
@@ -39,14 +43,24 @@ export default function SignupPage({ go }) {
   const validEmail = EMAIL_RE.test(email);
   const matches = confirm.length > 0 && confirm === password;
   const allReqsMet = Object.values(reqs).every(Boolean);
-  const canSubmit = name.trim().length > 1 && validEmail && allReqsMet && matches;
+  const canSubmit = name.trim().length > 1 && validEmail && allReqsMet && matches && !submitting;
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     setTouched(true);
-    // Account creation is simulated until the auth API exists (Phase 3).
-    if (canSubmit) go("workspace");
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setServerError(null);
+    try {
+      const session = await authService.signup({ name: name.trim(), email: email.trim(), password });
+      onAuthenticated(session);
+    } catch (err) {
+      setServerError({ field: err.details?.field ?? "email", message: err.message || "Couldn't create the account." });
+      setSubmitting(false);
+    }
   }
+
+  const fieldError = (field) => (serverError?.field === field ? serverError.message : null);
 
   return (
     <AuthShell>
@@ -55,13 +69,13 @@ export default function SignupPage({ go }) {
         Set up a workspace for your research.
       </p>
       <form onSubmit={submit} noValidate>
-        <Field label="Full name" error={touched && name.trim().length < 2 ? "Enter your full name." : null}>
+        <Field label="Full name" error={fieldError("name") ?? (touched && name.trim().length < 2 ? "Enter your full name." : null)}>
           <TextInput autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ada Lovelace" />
         </Field>
-        <Field label="Email" error={touched && !validEmail ? "Enter a valid email address." : null}>
-          <TextInput type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@university.edu" />
+        <Field label="Email" error={fieldError("email") ?? (touched && !validEmail ? "Enter a valid email address." : null)}>
+          <TextInput type="email" autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); setServerError(null); }} placeholder="you@university.edu" />
         </Field>
-        <Field label="Password">
+        <Field label="Password" error={fieldError("password")}>
           <div className="relative">
             <TextInput
               type={showPw ? "text" : "password"} autoComplete="new-password" value={password}
@@ -91,9 +105,14 @@ export default function SignupPage({ go }) {
             onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter your password"
           />
         </Field>
-        <Button type="submit" className="w-full" disabled={!canSubmit}>Create account</Button>
+        <Button type="submit" className="w-full" disabled={!canSubmit}>
+          {submitting ? <><Loader2 size={15} className="animate-spin" /> Creating account…</> : "Create account"}
+        </Button>
         <Divider />
-        <GoogleButton onClick={() => go("workspace")} />
+        <GoogleButton onClick={() => setNotice("Google sign-in is coming with OAuth in a later phase.")} />
+        {notice && (
+          <p className="text-[12px] mt-3 text-center" style={{ ...sans, color: T.black, opacity: 0.55 }} role="status">{notice}</p>
+        )}
       </form>
       <p className="text-center text-[13px] mt-7" style={{ ...sans, color: T.black, opacity: 0.7 }}>
         Already have an account?{" "}

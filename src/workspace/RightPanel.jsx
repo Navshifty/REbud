@@ -89,7 +89,7 @@ function SectionView({ section, data, onOpenChat }) {
   driven by its module record { status, data, error }, or a ChatPanel when
   a discussion is open. `chat` is a CHAT_TOPICS entry or null.
 */
-export default function RightPanel({ section, onSelectSection, analysis, hasFiles, onRetry, chat, onOpenChat, onCloseChat, mobileVisible = false }) {
+export default function RightPanel({ projectId, section, onSelectSection, analysis, hasFiles, onRetry, chat, onOpenChat, onCloseChat, mobileVisible = false }) {
   const module = analysis?.[section] ?? { status: "idle" };
 
   function renderBody() {
@@ -107,7 +107,14 @@ export default function RightPanel({ section, onSelectSection, analysis, hasFile
       aria-label="Research intelligence"
     >
       {chat ? (
-        <ChatPanel key={chat.title} title={chat.title} seed={chat.seed} followups={chat.followups} onClose={onCloseChat} />
+        <ChatPanel
+          key={`${projectId}:${chat.key}`}
+          projectId={projectId}
+          topic={chat.key}
+          title={chat.title}
+          seed={chat.seed}
+          onClose={onCloseChat}
+        />
       ) : (
         <>
           <div className="flex border-b overflow-x-auto shrink-0" style={{ borderColor: T.line }} role="tablist">

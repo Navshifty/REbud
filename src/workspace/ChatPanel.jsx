@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, MessageSquare, Send, X } from "lucide-react";
+import { AlertTriangle, Loader2, MessageSquare, Send, X } from "lucide-react";
+import { sendMessage } from "../services/chatService";
 import { T, serif, sans } from "../styles/tokens";
 
 /*
-  Context-aware AI discussion about one analysis topic (e.g. gaps, novelty).
-  Replies are canned `followups` until the chat API exists (Phase 3/4).
+  Context-aware AI discussion about one analysis topic for one project.
+  Replies come from chatService (API or mock). Each assistant message
+  carries `grounded` so the UI can flag when an answer is not yet backed
+  by the project's own analysis.
 */
-export default function ChatPanel({ title, seed, followups, onClose }) {
+export default function ChatPanel({ projectId, topic, title, seed = [], onClose }) {
   const [messages, setMessages] = useState(seed);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const scrollRef = useRef(null);
 
   // Keep the newest message in view.
@@ -18,18 +22,22 @@ export default function ChatPanel({ title, seed, followups, onClose }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
-  function send() {
+  async function send() {
     const text = input.trim();
     if (!text || loading) return;
-    const userTurns = messages.filter((m) => m.role === "user").length;
-    setMessages((m) => [...m, { role: "user", text }]);
+    const history = [...messages, { role: "user", text }];
+    setMessages(history);
     setInput("");
     setLoading(true);
-    setTimeout(() => {
-      const reply = followups[Math.min(userTurns - 1, followups.length - 1)] || followups[0];
-      setMessages((m) => [...m, { role: "assistant", text: reply }]);
+    setError(null);
+    try {
+      const { message, grounded } = await sendMessage(projectId, { topic, messages: history });
+      setMessages((m) => [...m, { ...message, grounded }]);
+    } catch (err) {
+      setError(err.message || "Couldn't get a reply.");
+    } finally {
       setLoading(false);
-    }, 1100);
+    }
   }
 
   return (
@@ -52,6 +60,7 @@ export default function ChatPanel({ title, seed, followups, onClose }) {
               <div className="max-w-[85%]">
                 <p className="text-[10.5px] mb-1 uppercase tracking-wide" style={{ ...sans, color: T.black, opacity: 0.4, textAlign: isUser ? "right" : "left" }}>
                   {isUser ? "You" : "REbud"}
+                  {!isUser && m.grounded === false && <span title="Not yet grounded in this project's analysis"> · general</span>}
                 </p>
                 <div
                   className="px-3.5 py-2.5 text-[12.5px] leading-relaxed"
@@ -74,6 +83,12 @@ export default function ChatPanel({ title, seed, followups, onClose }) {
               <Loader2 size={12} className="animate-spin" style={{ color: T.inkSoft }} aria-hidden="true" />
               <span className="text-[12px]" style={{ ...sans, color: T.black, opacity: 0.5 }}>Thinking…</span>
             </div>
+          </div>
+        )}
+        {error && (
+          <div className="flex items-start gap-2 px-3.5 py-2.5 border" style={{ borderColor: T.warn }} role="alert">
+            <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: T.warn }} aria-hidden="true" />
+            <p className="text-[12px] leading-relaxed" style={{ ...sans, color: T.warn }}>{error}</p>
           </div>
         )}
       </div>

@@ -6,21 +6,21 @@ import Field from "../components/Field";
 import TextInput from "../components/TextInput";
 import GoogleButton from "../components/GoogleButton";
 import Divider from "../components/Divider";
+import * as authService from "../services/authService";
+import { API_ENABLED } from "../services/apiClient";
 import { T, serif, sans } from "../styles/tokens";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* Mock credential accepted by the prototype until real auth exists. */
-const DEMO_PASSWORD = "correcthorse";
-
-export default function LoginPage({ go }) {
+export default function LoginPage({ go, onAuthenticated }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | loading | error | success
   const [errors, setErrors] = useState({});
+  const [notice, setNotice] = useState(null);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     const next = {};
     if (!email) next.email = "Email is required.";
@@ -29,17 +29,16 @@ export default function LoginPage({ go }) {
     setErrors(next);
     if (Object.keys(next).length) return;
 
-    // Simulated request — replaced by the auth API in Phase 3.
     setStatus("loading");
-    setTimeout(() => {
-      if (password !== DEMO_PASSWORD) {
-        setStatus("error");
-        setErrors({ password: "Incorrect email or password." });
-      } else {
-        setStatus("success");
-        setTimeout(() => go("workspace"), 700);
-      }
-    }, 1000);
+    try {
+      const session = await authService.login({ email: email.trim(), password });
+      setStatus("success");
+      setTimeout(() => onAuthenticated(session), 600);
+    } catch (err) {
+      setStatus("error");
+      const field = err.details?.field ?? "password";
+      setErrors({ [field]: err.message || "Couldn't log in." });
+    }
   }
 
   return (
@@ -66,7 +65,8 @@ export default function LoginPage({ go }) {
             <div className="relative">
               <TextInput
                 type={showPw ? "text" : "password"} autoComplete="current-password" value={password} error={errors.password}
-                placeholder="Try: correcthorse" onChange={(e) => setPassword(e.target.value)}
+                placeholder={API_ENABLED ? "Your password" : `Try: ${authService.DEMO_PASSWORD}`}
+                onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 type="button"
@@ -81,13 +81,23 @@ export default function LoginPage({ go }) {
             </div>
           </Field>
           <div className="flex justify-end mb-5">
-            <button type="button" className="text-[12.5px]" style={{ ...sans, color: T.inkSoft }}>Forgot password?</button>
+            <button
+              type="button"
+              className="text-[12.5px]"
+              style={{ ...sans, color: T.inkSoft }}
+              onClick={() => setNotice("Password reset arrives with email delivery in a later phase.")}
+            >
+              Forgot password?
+            </button>
           </div>
+          {notice && (
+            <p className="text-[12px] mb-4 -mt-2 text-right" style={{ ...sans, color: T.black, opacity: 0.55 }} role="status">{notice}</p>
+          )}
           <Button type="submit" className="w-full" disabled={status === "loading"}>
             {status === "loading" ? <><Loader2 size={15} className="animate-spin" /> Logging in…</> : "Log in"}
           </Button>
           <Divider />
-          <GoogleButton onClick={() => go("workspace")} />
+          <GoogleButton onClick={() => setNotice("Google sign-in is coming with OAuth in a later phase.")} />
         </form>
       )}
 

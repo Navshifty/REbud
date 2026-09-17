@@ -1,12 +1,8 @@
 import { useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { fileIcon } from "../utils/fileIcon";
-import { ACCEPT_ATTR, processDocument, toDocumentRecord, validateFile } from "../services/documentService";
-import { MAX_FILES } from "./config";
+import { ACCEPT_ATTR, MAX_FILES } from "../services/documentService";
 import { T, serif, sans, mono } from "../styles/tokens";
-
-let docCounter = 0;
-const nextDocId = () => `d_${Date.now().toString(36)}_${++docCounter}`;
 
 function StatusBadge({ status }) {
   if (status === "Uploading") {
@@ -35,42 +31,19 @@ function StatusBadge({ status }) {
 
 /*
   Drag-and-drop document uploader plus file list for the active project.
-  Validation and (mock) processing are delegated to documentService.
+  `onUpload(files)` resolves with { rejected: [...reasons] }; the list
+  itself is owned by the workspace state (optimistic placeholders included).
 */
-export default function DocumentUpload({ files, setFiles }) {
+export default function DocumentUpload({ files, filesLoaded = true, onUpload, onRemove }) {
   const [dragging, setDragging] = useState(false);
   const [rejections, setRejections] = useState([]);
   const inputRef = useRef(null);
   const atLimit = files.length >= MAX_FILES;
 
-  function addFiles(list) {
-    if (atLimit) return;
-    const incoming = Array.from(list);
-    const room = MAX_FILES - files.length;
-    const accepted = [];
-    const rejected = [];
-
-    for (const f of incoming) {
-      const check = validateFile(f);
-      if (!check.ok) rejected.push(check.reason);
-      else if (accepted.length < room) accepted.push(f);
-      else rejected.push(`"${f.name}" skipped — the ${MAX_FILES}-file limit was reached.`);
-    }
-    setRejections(rejected);
-
-    const records = accepted.map((f) => toDocumentRecord(f, nextDocId()));
-    if (records.length === 0) return;
-    setFiles((prev) => [...prev, ...records]);
-
-    records.forEach((record) => {
-      processDocument(record)
-        .then((done) => setFiles((prev) => prev.map((f) => (f.id === record.id ? done : f))))
-        .catch(() => setFiles((prev) => prev.map((f) => (f.id === record.id ? { ...f, status: "Failed" } : f))));
-    });
-  }
-
-  function removeFile(id) {
-    setFiles((prev) => prev.filter((x) => x.id !== id));
+  async function addFiles(list) {
+    if (atLimit || !list?.length) return;
+    const { rejected } = await onUpload(list);
+    setRejections(rejected ?? []);
   }
 
   return (
@@ -129,6 +102,12 @@ export default function DocumentUpload({ files, setFiles }) {
         </div>
       )}
 
+      {!filesLoaded && files.length === 0 && (
+        <p className="mt-3 flex items-center gap-2 text-[12.5px]" style={{ ...sans, color: T.black, opacity: 0.5 }} role="status">
+          <Loader2 size={12} className="animate-spin" aria-hidden="true" /> Loading documents…
+        </p>
+      )}
+
       {files.length > 0 && (
         <ul className="mt-3 border" style={{ borderColor: T.line }}>
           {files.map((f, i) => {
@@ -143,7 +122,13 @@ export default function DocumentUpload({ files, setFiles }) {
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="hidden sm:inline text-[11.5px]" style={{ ...mono, color: T.black, opacity: 0.5 }}>{f.size}</span>
                   <StatusBadge status={f.status} />
-                  <button type="button" aria-label={`Remove ${f.name}`} onClick={() => removeFile(f.id)}>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${f.name}`}
+                    disabled={f.status === "Uploading"}
+                    className="disabled:opacity-30"
+                    onClick={() => onRemove(f.id)}
+                  >
                     <X size={14} style={{ color: T.black, opacity: 0.4 }} />
                   </button>
                 </div>
