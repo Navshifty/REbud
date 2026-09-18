@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { badRequest, requireString } from "../lib/errors.js";
 import { analyses, documents, projects } from "../lib/store.js";
 import { removeProjectFiles } from "./document.service.js";
+import { invalidateCorpus } from "./corpus.service.js";
 
 /*
   Projects belong to a user. `summary` is derived from documents and
@@ -64,6 +65,7 @@ export async function updateProject(project, body) {
 }
 
 export async function deleteProject(project) {
+  invalidateCorpus(project.id);
   await removeProjectFiles(project.id);
   await documents.remove((d) => d.projectId === project.id);
   await analyses.remove((a) => a.projectId === project.id);

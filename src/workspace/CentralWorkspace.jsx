@@ -6,7 +6,7 @@ import { T, serif, sans, mono } from "../styles/tokens";
 
 /* Main column: project header, derived stats, document upload and analysis triggers. */
 export default function CentralWorkspace({
-  project, summary, files, filesLoaded, onUpload, onRemoveFile, running, onRun, onEditProject, mobileHidden = false,
+  project, summary, files, filesLoaded, onUpload, onRemoveFile, onReprocessFile, running, onRun, onEditProject, mobileHidden = false,
 }) {
   const hasFiles = files.length > 0;
   const stats = [
@@ -56,7 +56,7 @@ export default function CentralWorkspace({
           ))}
         </dl>
 
-        <DocumentUpload files={files} filesLoaded={filesLoaded} onUpload={onUpload} onRemove={onRemoveFile} />
+        <DocumentUpload files={files} filesLoaded={filesLoaded} onUpload={onUpload} onRemove={onRemoveFile} onReprocess={onReprocessFile} />
         <AnalysisActions hasFiles={hasFiles} running={running} onRun={onRun} />
       </div>
     </main>

@@ -61,7 +61,7 @@ const mock = {
       const check = validateFile(file);
       if (!check.ok) { rejected.push(check.reason); continue; }
       if (list.length >= MAX_FILES) { rejected.push(`"${file.name}" skipped — the ${MAX_FILES}-file limit was reached.`); continue; }
-      const doc = { ...pendingRecord(file, nextId("d")), status: "Processed", createdAt: Date.now() };
+      const doc = { ...pendingRecord(file, nextId("d")), status: "Processed", extraction: "extracted", createdAt: Date.now() };
       list.push(doc);
       documents.push({ ...doc });
     }
@@ -93,3 +93,10 @@ const impl = API_ENABLED ? api : mock;
 export const listDocuments = (projectId) => impl.listDocuments(projectId);
 export const uploadDocuments = (projectId, files) => impl.uploadDocuments(projectId, files);
 export const deleteDocument = (projectId, docId) => impl.deleteDocument(projectId, docId);
+
+/** Re-run server-side text extraction for a document (API mode only). */
+export async function reprocessDocument(projectId, docId) {
+  if (!API_ENABLED) return null;
+  const { document } = await request(`/projects/${projectId}/documents/${docId}/reprocess`, { method: "POST" });
+  return document;
+}

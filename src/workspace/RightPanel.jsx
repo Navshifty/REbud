@@ -1,5 +1,6 @@
 import { AlertTriangle, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import ChatPanel from "./ChatPanel";
+import Provenance from "../components/Provenance";
 import { TABS } from "./config";
 import {
   CritiqueSection, GapsSection, NoveltySection, OverviewSection,
@@ -96,7 +97,14 @@ export default function RightPanel({ projectId, section, onSelectSection, analys
     if (!hasFiles && module.status !== "done") return <NoDocuments />;
     if (module.status === "running") return <Running section={section} />;
     if (module.status === "error") return <Failed error={module.error} onRetry={() => onRetry(section)} />;
-    if (module.status === "done") return <SectionView section={section} data={module.data} onOpenChat={onOpenChat} />;
+    if (module.status === "done") {
+      return (
+        <>
+          <SectionView section={section} data={module.data} onOpenChat={onOpenChat} />
+          <Provenance meta={module.meta} />
+        </>
+      );
+    }
     return <NotRun section={section} />;
   }
 

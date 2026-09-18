@@ -7,7 +7,17 @@ import { FILES_BY_PROJECT, MOCK_ANALYSIS, MOCK_ANALYSIS_BY_PROJECT, PROJECTS, CH
 */
 
 export const ANALYSIS_MODULES = ["overview", "gaps", "novelty", "critique", "relevance", "related", "suggestions"];
-const IDLE = { status: "idle", data: null, error: null, updatedAt: null };
+const IDLE = { status: "idle", data: null, error: null, updatedAt: null, meta: null };
+
+/* Provenance stamped on every mock result, so the UI never presents
+   sample data as an analysis of the user's own documents. */
+export const sampleMeta = (projectId) => ({
+  source: "sample",
+  model: null,
+  generatedAt: Date.now(),
+  documents: filesFor(projectId).map((f) => f.name),
+  note: "Sample result. Connect the REbud API with an Anthropic API key to analyse your own documents.",
+});
 
 let counter = 0;
 export const nextId = (prefix) => `${prefix}_${Date.now().toString(36)}_${++counter}`;

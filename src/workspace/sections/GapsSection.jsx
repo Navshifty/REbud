@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, MessageSquare, Quote, ScanSearch } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageSquare, ScanSearch } from "lucide-react";
 import PanelHeading from "../../components/PanelHeading";
 import SeverityTag from "../../components/SeverityTag";
+import EvidenceList from "../../components/EvidenceList";
 import { T, sans, mono } from "../../styles/tokens";
 
 /*
-  Research gaps as expandable cards. Each gap shows the AI's explanation
-  separately from the document evidence that supports it.
+  Research gaps as expandable cards. Each gap separates the model's
+  explanation (interpretation) from the document evidence behind it.
 */
 export default function GapsSection({ data, onOpenChat }) {
   const [expanded, setExpanded] = useState(null);
@@ -38,12 +39,13 @@ export default function GapsSection({ data, onOpenChat }) {
               {open && (
                 <div className="px-3.5 pb-3.5 pt-0.5" style={{ borderTop: `1px solid ${T.softBlueLine}` }}>
                   <p className="text-[12.5px] leading-relaxed mt-3" style={{ ...sans, color: T.black, opacity: 0.75 }}>{g.explanation}</p>
-                  <p className="text-[11px] mt-3 mb-1" style={{ ...sans, color: T.black, opacity: 0.45 }}>Supporting evidence</p>
-                  {g.evidence.map((e, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-[11.5px] mt-1" style={{ ...sans, color: T.inkSoft }}>
-                      <Quote size={11} aria-hidden="true" /> {e}
+                  {g.opportunity && (
+                    <div className="mt-3">
+                      <p className="text-[11px] mb-1" style={{ ...sans, color: T.ok }}>Opportunity</p>
+                      <p className="text-[12.5px] leading-relaxed" style={{ ...sans, color: T.black, opacity: 0.75 }}>{g.opportunity}</p>
                     </div>
-                  ))}
+                  )}
+                  <EvidenceList evidence={g.evidence} />
                 </div>
               )}
             </div>
