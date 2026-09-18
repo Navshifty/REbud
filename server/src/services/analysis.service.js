@@ -1,19 +1,20 @@
-import { config } from "../config.js";
 import { badRequest } from "../lib/errors.js";
 import { analyses, documents, projects } from "../lib/store.js";
-import { ANALYSIS_MODULES, MOCK_ANALYSIS } from "../data/mockAnalysis.js";
+import { ANALYSIS_MODULES } from "../data/mockAnalysis.js";
+import { runModule } from "./pipeline.service.js";
+import * as llm from "./llm.service.js";
 
 /*
   Analysis state per project per module:
-    { status: "idle" | "running" | "done" | "error", data, error, updatedAt }
+    { status: "idle" | "running" | "done" | "error", data, error, updatedAt, meta }
 
   Running a module is asynchronous: the request marks it "running" and a
-  background job completes it. Today the job waits and returns canned
-  results; Phase 4 replaces `produceResult` with the real pipeline while
-  the state machine and API stay the same.
+  background job (pipeline.service) completes it. `meta` records where the
+  result came from (model vs sample), which documents were used and token
+  usage, so the UI can show provenance.
 */
 
-const IDLE = { status: "idle", data: null, error: null, updatedAt: null };
+const IDLE = { status: "idle", data: null, error: null, updatedAt: null, meta: null };
 
 function emptyModules() {
   return Object.fromEntries(ANALYSIS_MODULES.map((m) => [m, { ...IDLE }]));
@@ -29,7 +30,14 @@ async function ensureRecord(projectId) {
 }
 
 export function getAnalysis(projectId) {
-  return analyses.byId(projectId)?.modules ?? emptyModules();
+  const modules = analyses.byId(projectId)?.modules ?? emptyModules();
+  // Older records may lack `meta`; keep the shape uniform for the client.
+  return Object.fromEntries(Object.entries(modules).map(([k, v]) => [k, { meta: null, ...v }]));
+}
+
+/** What the analysis engine can do right now — surfaced on /api/health. */
+export function capabilities() {
+  return llm.describe();
 }
 
 async function setModule(projectId, module, patch) {
@@ -39,20 +47,15 @@ async function setModule(projectId, module, patch) {
   return modules;
 }
 
-/** Where the real research-intelligence pipeline will plug in. */
-async function produceResult(module, _project, _docs) {
-  await new Promise((resolve) => setTimeout(resolve, config.mockAnalysisMs));
-  return MOCK_ANALYSIS[module];
-}
-
 function runJob(project, module, docs) {
-  produceResult(module, project, docs)
-    .then((data) => {
+  runModule(module, project, docs)
+    .then(({ data, meta }) => {
       if (!projects.byId(project.id)) return; // project deleted while running
-      return setModule(project.id, module, { status: "done", data, error: null, updatedAt: Date.now() });
+      return setModule(project.id, module, { status: "done", data, error: null, updatedAt: Date.now(), meta });
     })
     .catch((err) => {
       if (!projects.byId(project.id)) return;
+      console.error(`[analysis] ${module} failed for project ${project.id}:`, err.message);
       return setModule(project.id, module, { status: "error", error: err.message || "Analysis failed." });
     })
     .catch((err) => console.error("analysis job failed to persist", err));
@@ -68,10 +71,13 @@ export async function runModules(project, modules) {
   if (unknown.length) throw badRequest(`Unknown analysis module(s): ${unknown.join(", ")}.`, { modules: unknown });
 
   const docs = documents.find((d) => d.projectId === project.id && d.status === "Processed");
+  const readable = docs.filter((d) => d.extraction === "extracted");
   let latest = getAnalysis(project.id);
 
-  if (docs.length === 0) {
-    const error = "No processed documents yet. Upload a document, then run the analysis again.";
+  if (docs.length === 0 || (llm.isConfigured() && readable.length === 0)) {
+    const error = docs.length === 0
+      ? "No processed documents yet. Upload a document, then run the analysis again."
+      : "None of the uploaded documents have readable text. Try re-processing them or uploading a text-based PDF, DOCX, TXT, MD or CSV.";
     for (const m of modules) latest = await setModule(project.id, m, { status: "error", error });
     return { modules: latest, started: false };
   }
@@ -79,7 +85,7 @@ export async function runModules(project, modules) {
   for (const m of modules) {
     if (latest[m]?.status === "running") continue; // already in flight
     latest = await setModule(project.id, m, { status: "running", error: null });
-    runJob(project, m, docs);
+    runJob(project, m, llm.isConfigured() ? readable : docs);
   }
   return { modules: latest, started: true };
 }

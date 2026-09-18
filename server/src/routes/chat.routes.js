@@ -7,7 +7,7 @@ const router = Router({ mergeParams: true });
 
 /** POST { topic?, messages: [{role, text}] } → { message: {role, text}, grounded } */
 router.post("/", asyncHandler(async (req, res) => {
-  res.json(reply(req.project, req.body ?? {}));
+  res.json(await reply(req.project, req.body ?? {}));
 }));
 
 export default router;
