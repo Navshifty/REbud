@@ -1,30 +1,41 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, RotateCcw, Upload, X } from "lucide-react";
 import { fileIcon } from "../utils/fileIcon";
 import { ACCEPT_ATTR, MAX_FILES } from "../services/documentService";
 import { T, serif, sans, mono } from "../styles/tokens";
 
-function StatusBadge({ status }) {
-  if (status === "Uploading") {
+/*
+  A document is usable for analysis only once its text has been
+  extracted, so the badge reports extraction, not just upload.
+*/
+function StatusBadge({ doc }) {
+  if (doc.status === "Uploading") {
     return (
       <span className="flex items-center gap-1.5 text-[11.5px]" style={{ ...sans, color: T.inkSoft }}>
         <Loader2 size={11} className="animate-spin" aria-hidden="true" /> Uploading
       </span>
     );
   }
-  if (status === "Processing") {
+  if (doc.status === "Processing") {
     return <span className="text-[11.5px]" style={{ ...sans, color: T.inkSoft }}>Processing</span>;
   }
-  if (status === "Failed") {
+  if (doc.status === "Failed") {
     return (
       <span className="flex items-center gap-1.5 text-[11.5px]" style={{ ...sans, color: T.warn }}>
-        <AlertTriangle size={12} aria-hidden="true" /> Failed
+        <AlertTriangle size={12} aria-hidden="true" /> Upload failed
+      </span>
+    );
+  }
+  if (doc.extraction === "failed") {
+    return (
+      <span className="flex items-center gap-1.5 text-[11.5px]" style={{ ...sans, color: T.warn }} title={doc.extractionError}>
+        <AlertTriangle size={12} aria-hidden="true" /> No text found
       </span>
     );
   }
   return (
     <span className="flex items-center gap-1.5 text-[11.5px]" style={{ ...sans, color: T.ok }}>
-      <CheckCircle2 size={12} aria-hidden="true" /> Processed
+      <CheckCircle2 size={12} aria-hidden="true" /> Ready
     </span>
   );
 }
@@ -34,7 +45,7 @@ function StatusBadge({ status }) {
   `onUpload(files)` resolves with { rejected: [...reasons] }; the list
   itself is owned by the workspace state (optimistic placeholders included).
 */
-export default function DocumentUpload({ files, filesLoaded = true, onUpload, onRemove }) {
+export default function DocumentUpload({ files, filesLoaded = true, onUpload, onRemove, onReprocess }) {
   const [dragging, setDragging] = useState(false);
   const [rejections, setRejections] = useState([]);
   const inputRef = useRef(null);
@@ -121,7 +132,18 @@ export default function DocumentUpload({ files, filesLoaded = true, onUpload, on
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="hidden sm:inline text-[11.5px]" style={{ ...mono, color: T.black, opacity: 0.5 }}>{f.size}</span>
-                  <StatusBadge status={f.status} />
+                  <StatusBadge doc={f} />
+                  {f.extraction === "failed" && onReprocess && (
+                    <button
+                      type="button"
+                      aria-label={`Retry text extraction for ${f.name}`}
+                      onClick={() => onReprocess(f.id)}
+                      className="flex items-center gap-1 text-[11.5px]"
+                      style={{ ...sans, color: T.ink }}
+                    >
+                      <RotateCcw size={11} aria-hidden="true" /> Retry
+                    </button>
+                  )}
                   <button
                     type="button"
                     aria-label={`Remove ${f.name}`}

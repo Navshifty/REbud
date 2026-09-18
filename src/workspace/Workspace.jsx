@@ -173,6 +173,7 @@ export default function Workspace({ go, user, onSignOut }) {
           filesLoaded={ws.activeLoaded}
           onUpload={ws.uploadFiles}
           onRemoveFile={ws.removeFile}
+          onReprocessFile={ws.reprocessFile}
           running={ws.isRunning}
           onRun={runAction}
           onEditProject={() => setDialog({ kind: "edit", project: ws.activeProject })}

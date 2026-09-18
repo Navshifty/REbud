@@ -64,25 +64,26 @@ export function invalidateCorpus(projectId) {
 export function selectChunks(corpus, queries, { maxChars = config.maxContextChars } = {}) {
   if (corpus.totalChars <= maxChars) return corpus.chunks;
 
-  const picked = new Map();
-  for (const source of corpus.sources) {
-    const first = corpus.chunks.find((c) => c.docLabel === source.label);
-    if (first) picked.set(first.id, first);
-  }
+  // Every document keeps its opening chunk so no source disappears from view.
+  const mustHave = corpus.sources
+    .map((s) => corpus.chunks.find((c) => c.docLabel === s.label))
+    .filter(Boolean);
+  const picked = new Map(mustHave.map((c) => [c.id, c]));
+  let budget = maxChars - mustHave.reduce((sum, c) => sum + c.text.length, 0);
+
+  // Then the passages most relevant to the module's questions, best first.
   const perQuery = Math.max(4, Math.ceil(40 / Math.max(1, queries.length)));
-  for (const q of queries) {
-    for (const { chunk } of search(corpus.index, q, perQuery)) picked.set(chunk.id, chunk);
+  const ranked = [];
+  for (const q of queries) for (const hit of search(corpus.index, q, perQuery)) ranked.push(hit);
+  ranked.sort((a, b) => b.score - a.score);
+  for (const { chunk } of ranked) {
+    if (picked.has(chunk.id) || chunk.text.length > budget) continue;
+    picked.set(chunk.id, chunk);
+    budget -= chunk.text.length;
   }
 
-  let budget = maxChars;
-  const ordered = [...picked.values()].sort((a, b) => (a.docLabel === b.docLabel ? a.index - b.index : a.docLabel.localeCompare(b.docLabel)));
-  const result = [];
-  for (const c of ordered) {
-    if (c.text.length > budget) continue;
-    result.push(c);
-    budget -= c.text.length;
-  }
-  return result;
+  // Present in reading order so the model sees documents coherently.
+  return [...picked.values()].sort((a, b) => (a.docLabel === b.docLabel ? a.index - b.index : a.docLabel.localeCompare(b.docLabel)));
 }
 
 /** Retrieval for chat: the k best chunks for a question. */

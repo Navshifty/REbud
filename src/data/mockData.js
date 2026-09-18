@@ -225,8 +225,15 @@ export const MOCK_ANALYSIS = {
 /*  SEEDED ANALYSIS STATE                                                  */
 /* ---------------------------------------------------------------------- */
 
-const idle = { status: "idle", data: null, error: null, updatedAt: null };
-const done = (data, updatedAt) => ({ status: "done", data, error: null, updatedAt });
+const idle = { status: "idle", data: null, error: null, updatedAt: null, meta: null };
+const sampleMeta = (updatedAt) => ({
+  source: "sample",
+  model: null,
+  generatedAt: updatedAt,
+  documents: [],
+  note: "Sample result. Connect the REbud API with an Anthropic API key to analyse your own documents.",
+});
+const done = (data, updatedAt) => ({ status: "done", data, error: null, updatedAt, meta: sampleMeta(updatedAt) });
 
 /* Per-project, per-module analysis state the workspace starts with, so the
    demo has one fully analysed project, one partially analysed, and two
