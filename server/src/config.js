@@ -31,4 +31,17 @@ export const config = {
   maxUploadBytes: 25 * 1024 * 1024,
   maxFilesPerProject: 20,
   acceptedExtensions: ["pdf", "docx", "txt", "csv", "md"],
+
+  // Research-intelligence pipeline (Phase 4). Without an API key the
+  // server serves labelled sample results instead of calling the model.
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-opus-5",
+  analysisEffort: process.env.ANALYSIS_EFFORT ?? "high", // low | medium | high | xhigh | max
+  enableWebSearch: process.env.ENABLE_WEB_SEARCH === "true",
+  // How much document text to hand the model per analysis request. Beyond
+  // this the corpus is narrowed with retrieval instead of sent whole.
+  maxContextChars: Number(process.env.MAX_CONTEXT_CHARS ?? 160_000),
+  chunkChars: Number(process.env.CHUNK_CHARS ?? 1800),
 };
+
+export const llmEnabled = () => Boolean(config.anthropicApiKey);

@@ -2,17 +2,17 @@ import crypto from "node:crypto";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { config } from "../config.js";
-import { badRequest } from "../lib/errors.js";
+import { badRequest, notFound } from "../lib/errors.js";
 import { documents } from "../lib/store.js";
+import { extractText } from "./extraction.service.js";
 
 /*
   Documents are stored on disk under UPLOAD_DIR as <id>.<ext>; metadata
-  lives in the store. Plain-text formats are extracted immediately to
-  <id>.txt. PDF and DOCX extraction is a Phase 4 concern, so those
-  documents are stored with extraction "pending".
-*/
+  lives in the store. Text is extracted on upload (PDF, DOCX, TXT, MD, CSV)
+  to <id>.txt and becomes the evidence base for analysis and chat.
 
-const TEXT_EXTENSIONS = new Set(["txt", "md", "csv"]);
+  extraction: "extracted" | "failed"   (with extractionError when failed)
+*/
 
 export function extensionOf(name) {
   const parts = String(name).split(".");
@@ -40,6 +40,18 @@ export function publicDocument(doc) {
 
 export function listDocuments(projectId) {
   return documents.find((d) => d.projectId === projectId).sort((a, b) => a.createdAt - b.createdAt).map(publicDocument);
+}
+
+/** Run text extraction for a stored document and persist the outcome. */
+async function extractAndStore(doc, buffer) {
+  const ext = extensionOf(doc.name);
+  try {
+    const { text, pages, method } = await extractText(buffer, ext);
+    await fsp.writeFile(textPath(doc), text);
+    return { extraction: "extracted", extractionError: null, extractionMethod: method, chars: text.length, pages };
+  } catch (err) {
+    return { extraction: "failed", extractionError: err.message || "Text extraction failed.", extractionMethod: null, chars: 0, pages: null };
+  }
 }
 
 /**
@@ -80,19 +92,12 @@ export async function addDocuments(project, files) {
       bytes: file.size,
       status: "Processed",
       storedName: `${id}.${ext}`,
-      extraction: TEXT_EXTENSIONS.has(ext) ? "extracted" : "pending",
-      chars: 0,
       createdAt: Date.now(),
     };
 
     await fsp.mkdir(config.uploadDir, { recursive: true });
     await fsp.writeFile(storedPath(doc), file.buffer);
-
-    if (doc.extraction === "extracted") {
-      const text = file.buffer.toString("utf8");
-      doc.chars = text.length;
-      await fsp.writeFile(textPath(doc), text);
-    }
+    Object.assign(doc, await extractAndStore(doc, file.buffer));
 
     await documents.insert(doc);
     accepted.push(publicDocument(doc));
@@ -101,7 +106,16 @@ export async function addDocuments(project, files) {
   return { documents: accepted, rejected };
 }
 
-/** Extracted text for a document, or null when extraction is pending. */
+/** Re-run extraction for an existing document (e.g. one uploaded before PDF support). */
+export async function reprocessDocument(project, docId) {
+  const doc = documents.findOne((d) => d.id === docId && d.projectId === project.id);
+  if (!doc) throw notFound("Document not found.");
+  const buffer = await fsp.readFile(storedPath(doc));
+  const updated = await documents.update(doc.id, await extractAndStore(doc, buffer));
+  return publicDocument(updated);
+}
+
+/** Extracted text for a document, or null when unavailable. */
 export async function readDocumentText(doc) {
   if (doc.extraction !== "extracted") return null;
   try {

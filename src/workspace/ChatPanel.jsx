@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Loader2, MessageSquare, Send, X } from "lucide-react";
 import { sendMessage } from "../services/chatService";
+import EvidenceList from "../components/EvidenceList";
 import { T, serif, sans } from "../styles/tokens";
 
 /*
   Context-aware AI discussion about one analysis topic for one project.
-  Replies come from chatService (API or mock). Each assistant message
-  carries `grounded` so the UI can flag when an answer is not yet backed
-  by the project's own analysis.
+  Replies come from chatService (API or mock). Assistant messages carry
+  `grounded` and `citations` so the UI can show which answers rest on the
+  project's documents and quote the passages they rely on.
 */
 export default function ChatPanel({ projectId, topic, title, seed = [], onClose }) {
   const [messages, setMessages] = useState(seed);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [followUps, setFollowUps] = useState([]);
   const scrollRef = useRef(null);
 
   // Keep the newest message in view.
@@ -22,22 +24,34 @@ export default function ChatPanel({ projectId, topic, title, seed = [], onClose 
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(textOverride) {
+    const text = (textOverride ?? input).trim();
     if (!text || loading) return;
     const history = [...messages, { role: "user", text }];
     setMessages(history);
     setInput("");
+    setFollowUps([]);
     setLoading(true);
     setError(null);
     try {
-      const { message, grounded } = await sendMessage(projectId, { topic, messages: history });
-      setMessages((m) => [...m, { ...message, grounded }]);
+      const result = await sendMessage(projectId, {
+        topic,
+        messages: history.map(({ role, text: t }) => ({ role, text: t })),
+      });
+      setMessages((m) => [...m, { ...result.message, grounded: result.grounded, source: result.source }]);
+      setFollowUps(result.followUps ?? []);
     } catch (err) {
       setError(err.message || "Couldn't get a reply.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function provenanceLabel(m) {
+    if (m.source === "sample") return "sample reply";
+    if (m.grounded === true) return "grounded in your documents";
+    if (m.grounded === false) return "general knowledge";
+    return null;
   }
 
   return (
@@ -55,12 +69,13 @@ export default function ChatPanel({ projectId, topic, title, seed = [], onClose 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" role="log" aria-live="polite">
         {messages.map((m, i) => {
           const isUser = m.role === "user";
+          const label = isUser ? null : provenanceLabel(m);
           return (
             <div key={i} className={isUser ? "flex justify-end" : "flex justify-start"}>
-              <div className="max-w-[85%]">
+              <div className="max-w-[88%]">
                 <p className="text-[10.5px] mb-1 uppercase tracking-wide" style={{ ...sans, color: T.black, opacity: 0.4, textAlign: isUser ? "right" : "left" }}>
                   {isUser ? "You" : "REbud"}
-                  {!isUser && m.grounded === false && <span title="Not yet grounded in this project's analysis"> · general</span>}
+                  {label && <span className="normal-case tracking-normal"> · {label}</span>}
                 </p>
                 <div
                   className="px-3.5 py-2.5 text-[12.5px] leading-relaxed"
@@ -72,6 +87,7 @@ export default function ChatPanel({ projectId, topic, title, seed = [], onClose 
                   }}
                 >
                   {m.text}
+                  {!isUser && <EvidenceList evidence={m.citations} label="Cited passages" compact />}
                 </div>
               </div>
             </div>
@@ -92,6 +108,22 @@ export default function ChatPanel({ projectId, topic, title, seed = [], onClose 
           </div>
         )}
       </div>
+
+      {followUps.length > 0 && !loading && (
+        <div className="px-3 pb-2 flex flex-wrap gap-1.5 shrink-0">
+          {followUps.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => send(q)}
+              className="text-[11.5px] px-2.5 py-1 border text-left hover:bg-cream"
+              style={{ ...sans, borderColor: T.softBlueLine, color: T.inkSoft }}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form
         className="p-3 border-t shrink-0"

@@ -1,5 +1,5 @@
 import { API_ENABLED, request } from "./apiClient";
-import { ANALYSIS_MODULES, MOCK_ANALYSIS, analysisFor, clone, db, delay, filesFor } from "./mock/mockDb";
+import { ANALYSIS_MODULES, MOCK_ANALYSIS, analysisFor, clone, db, delay, filesFor, sampleMeta } from "./mock/mockDb";
 
 /*
   Research analysis. Module records are
@@ -33,7 +33,7 @@ const mock = {
       analysis[m] = { ...analysis[m], status: "running", error: null };
       setTimeout(() => {
         if (!db.projects.some((p) => p.id === projectId)) return;
-        analysis[m] = { status: "done", data: clone(MOCK_ANALYSIS[m]), error: null, updatedAt: Date.now() };
+        analysis[m] = { status: "done", data: clone(MOCK_ANALYSIS[m]), error: null, updatedAt: Date.now(), meta: sampleMeta(projectId) };
       }, MOCK_LATENCY_MS);
     }
     return { modules: clone(analysis), started: true };

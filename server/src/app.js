@@ -3,6 +3,7 @@ import cors from "cors";
 import { config } from "./config.js";
 import authRoutes from "./routes/auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
+import { capabilities } from "./services/analysis.service.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 /* Builds the Express app. Kept separate from index.js so tests can import it. */
@@ -14,7 +15,7 @@ export function createApp() {
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", env: config.env, time: new Date().toISOString() });
+    res.json({ status: "ok", env: config.env, time: new Date().toISOString(), ai: capabilities() });
   });
 
   app.use("/api/auth", authRoutes);

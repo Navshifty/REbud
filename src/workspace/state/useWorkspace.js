@@ -159,6 +159,20 @@ export function useWorkspace() {
     }
   }, [setFiles, fail]);
 
+  /** Ask the server to re-run text extraction for one document. */
+  const reprocessFile = useCallback(async (docId) => {
+    const projectId = stateRef.current.activeProjectId;
+    if (!projectId) return;
+    setFiles(projectId, (prev) => prev.map((d) => (d.id === docId ? { ...d, status: "Processing" } : d)));
+    try {
+      const updated = await documentService.reprocessDocument(projectId, docId);
+      if (updated) setFiles(projectId, (prev) => prev.map((d) => (d.id === docId ? updated : d)));
+    } catch (err) {
+      setFiles(projectId, (prev) => prev.map((d) => (d.id === docId ? { ...d, status: "Processed" } : d)));
+      fail(err, "Couldn't re-process the document.");
+    }
+  }, [setFiles, fail]);
+
   const removeFile = useCallback(async (docId) => {
     const projectId = stateRef.current.activeProjectId;
     if (!projectId) return;
@@ -224,6 +238,7 @@ export function useWorkspace() {
     deleteProject,
     uploadFiles,
     removeFile,
+    reprocessFile,
     runModules,
   };
 }
