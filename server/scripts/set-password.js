@@ -3,11 +3,15 @@
   Set a local account's password.
 
   For development only: there is no email-based reset yet, so this is how
-  you recover an account on your own machine. The password is typed into
-  this process and hashed with bcrypt before it touches disk; it is never
-  echoed, logged or stored in plain text.
+  you recover an account on your own machine. The password is bcrypt-hashed
+  before it touches disk and is never written to the data files in plain text.
 
-  Usage:  node scripts/set-password.js you@example.com
+  Usage:
+    node scripts/set-password.js <email> <new-password>   non-interactive
+    node scripts/set-password.js <email>                  prompts, input masked
+
+  The prompt needs a real terminal. When stdin is piped or redirected,
+  pass the password as the second argument instead.
 */
 import readline from "node:readline";
 import bcrypt from "bcryptjs";
@@ -15,8 +19,10 @@ import { users } from "../src/lib/store.js";
 import { validatePassword } from "../src/services/auth.service.js";
 
 const email = (process.argv[2] ?? "").trim().toLowerCase();
+const inlinePassword = process.argv[3];
+
 if (!email) {
-  console.error("Usage: node scripts/set-password.js <email>");
+  console.error("Usage: node scripts/set-password.js <email> [new-password]");
   process.exit(1);
 }
 
@@ -27,43 +33,62 @@ if (!user) {
   process.exit(1);
 }
 
-/** Read a line without echoing it to the terminal. */
+/*
+  Masked prompt. Overriding _writeToOutput is the supported way to hide
+  input: readline keeps ownership of stdin, so this works where attaching
+  a second 'data' listener does not (notably Windows terminals).
+*/
 function askHidden(question) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    if (!process.stdin.isTTY) {
+      reject(new Error("No interactive terminal. Pass the password as the second argument instead."));
+      return;
+    }
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    const onData = (char) => {
-      // Re-write the prompt without the typed characters.
-      if (!["\n", "\r", "\u0004"].includes(String(char))) {
-        readline.clearLine(process.stdout, 0);
-        readline.cursorTo(process.stdout, 0);
-        process.stdout.write(question);
-      }
+    let muted = false;
+    rl._writeToOutput = (str) => {
+      // Echo the prompt itself, mask everything typed after it.
+      if (!muted || str.includes(question)) rl.output.write(str);
+      else rl.output.write("*");
     };
-    process.stdin.on("data", onData);
     rl.question(question, (answer) => {
-      process.stdin.removeListener("data", onData);
       rl.close();
       process.stdout.write("\n");
       resolve(answer);
     });
+    muted = true;
   });
 }
 
-console.log(`Setting a new password for ${user.name} <${user.email}>.`);
-console.log("Requirements: 8+ characters, with an uppercase letter, a lowercase letter and a symbol.\n");
+async function readPassword() {
+  if (inlinePassword !== undefined) return inlinePassword;
 
-const password = await askHidden("New password: ");
-const problem = validatePassword(password);
-if (problem) {
-  console.error(problem);
+  console.log(`Setting a new password for ${user.name} <${user.email}>.`);
+  console.log("Requirements: 8+ characters, with an uppercase letter, a lowercase letter and a symbol.\n");
+
+  const password = await askHidden("New password: ");
+  const confirm = await askHidden("Confirm password: ");
+  if (confirm !== password) {
+    console.error("Passwords do not match.");
+    process.exit(1);
+  }
+  return password;
+}
+
+try {
+  const password = await readPassword();
+  const problem = validatePassword(password);
+  if (problem) {
+    console.error(problem);
+    process.exit(1);
+  }
+  await users.update(user.id, { passwordHash: await bcrypt.hash(password, 10) });
+  console.log(`\nPassword updated for ${user.email}. Log in at http://localhost:5173`);
+  if (inlinePassword !== undefined) {
+    console.log("Tip: clear it from your shell history (PowerShell: Clear-History).");
+  }
+  process.exit(0);
+} catch (err) {
+  console.error(err.message);
   process.exit(1);
 }
-const confirm = await askHidden("Confirm password: ");
-if (confirm !== password) {
-  console.error("Passwords do not match.");
-  process.exit(1);
-}
-
-await users.update(user.id, { passwordHash: await bcrypt.hash(password, 10) });
-console.log(`\nDone. Log in at http://localhost:5173 as ${user.email}.`);
-process.exit(0);
