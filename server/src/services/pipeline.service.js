@@ -94,14 +94,14 @@ function projectPreamble(project) {
 /** Optional web-search pass used by the "related" module to verify papers. */
 async function researchRelatedWork(project, context) {
   const prompt = `${projectPreamble(project)}\n\n${context}\n\nUsing web search, find 4-8 real, verifiable papers or surveys closely related to this project. For each give title, authors, year, venue and a URL you actually retrieved, plus one sentence on why it matters here. Only include works you confirmed exist.`;
-  const result = await llm.generateText({
+  // The tool definition differs per provider; llm.service supplies the right shape.
+  return llm.generateText({
     system: SYSTEM_PROMPT,
     prompt,
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 6 }],
+    tools: [llm.webSearchTool()],
     maxTokens: 12000,
     effort: "medium",
   });
-  return result;
 }
 
 /**
@@ -165,6 +165,7 @@ export async function runModule(module, project, docs) {
     data: normalise(module, raw, corpus),
     meta: {
       source: "model",
+      provider: config.llmProvider,
       model,
       effort: config.analysisEffort,
       generatedAt: Date.now(),
