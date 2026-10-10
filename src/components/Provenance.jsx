@@ -9,7 +9,21 @@ import { T, sans } from "../styles/tokens";
   documents, usage, warnings, note }.
 */
 export default function Provenance({ meta }) {
-  if (!meta) return null;
+  // A result with no provenance predates the pipeline, so it is canned
+  // content. Never let it render as though it were real analysis.
+  if (!meta) {
+    return (
+      <div className="mt-6 pt-3 border-t" style={{ borderColor: T.line }}>
+        <div className="flex items-start gap-1.5">
+          <AlertTriangle size={12} className="mt-[2px] shrink-0" style={{ color: T.warn }} aria-hidden="true" />
+          <p className="text-[11px] leading-relaxed" style={{ ...sans, color: T.black, opacity: 0.6 }}>
+            <span style={{ color: T.warn, opacity: 1 }}>Placeholder result.</span>{" "}
+            This predates document analysis and is not based on your files. Run the analysis again to replace it.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const sample = meta.source !== "model";
   const docs = meta.documents?.length ?? 0;
 
