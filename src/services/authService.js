@@ -11,6 +11,9 @@ import { delay } from "./mock/mockDb";
 const MOCK_USER_KEY = "rebud.mockUser";
 export const DEMO_PASSWORD = "correcthorse";
 
+/* Mirrors the server rule (server/src/services/auth.service.js). */
+export const MIN_PASSWORD_LENGTH = 8;
+
 function readMockUser() {
   try { return JSON.parse(localStorage.getItem(MOCK_USER_KEY) || "null"); } catch { return null; }
 }
