@@ -11,9 +11,9 @@ const router = Router();
 router.use(requireAuth);
 
 /** GET /api/projects → { projects: [...] } (each with a derived `summary`) */
-router.get("/", (req, res) => {
-  res.json({ projects: listProjects(req.user.id) });
-});
+router.get("/", asyncHandler(async (req, res) => {
+  res.json({ projects: await listProjects(req.user.id) });
+}));
 
 /** POST /api/projects { name, objective? } → { project } */
 router.post("/", asyncHandler(async (req, res) => {
@@ -22,9 +22,9 @@ router.post("/", asyncHandler(async (req, res) => {
 }));
 
 /** GET /api/projects/:projectId → { project } */
-router.get("/:projectId", loadProject, (req, res) => {
-  res.json({ project: withSummary(req.project) });
-});
+router.get("/:projectId", loadProject, asyncHandler(async (req, res) => {
+  res.json({ project: await withSummary(req.project) });
+}));
 
 /** PATCH /api/projects/:projectId { name?, objective?, archived? } → { project } */
 router.patch("/:projectId", loadProject, asyncHandler(async (req, res) => {

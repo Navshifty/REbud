@@ -25,6 +25,8 @@ export const config = {
   // production must set one explicitly.
   jwtSecret: isProduction ? required("JWT_SECRET") : (process.env.JWT_SECRET ?? "rebud-dev-secret-change-me"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  mongoUri: process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017",
+  mongoDbName: process.env.MONGODB_DB ?? "rebud",
   dataDir: path.resolve(serverRoot, process.env.DATA_DIR ?? "data"),
   uploadDir: path.resolve(serverRoot, process.env.UPLOAD_DIR ?? "uploads"),
   mockAnalysisMs: Number(process.env.MOCK_ANALYSIS_MS ?? 1400),

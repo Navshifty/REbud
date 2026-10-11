@@ -31,8 +31,8 @@ export function validateMessages(messages) {
   if (messages[messages.length - 1].role !== "user") throw badRequest("The last message must be from the user.");
 }
 
-function cannedReply(project, topic, messages) {
-  const analysis = getAnalysis(project.id);
+async function cannedReply(project, topic, messages) {
+  const analysis = await getAnalysis(project.id);
   const key = topic && CHAT_REPLIES[topic] ? topic : "general";
   const replies = CHAT_REPLIES[key];
   const userTurns = messages.filter((m) => m.role === "user").length;
@@ -44,8 +44,8 @@ function cannedReply(project, topic, messages) {
 }
 
 /** Compact JSON of the finished analysis modules, most relevant topic first. */
-function analysisContext(projectId, topic) {
-  const analysis = getAnalysis(projectId);
+async function analysisContext(projectId, topic) {
+  const analysis = await getAnalysis(projectId);
   const done = Object.entries(analysis).filter(([, m]) => m.status === "done" && m.meta?.source !== "sample");
   if (done.length === 0) return "No analysis modules have been run yet.";
   done.sort(([a], [b]) => (a === topic ? -1 : b === topic ? 1 : 0));
@@ -73,7 +73,7 @@ async function groundedReply(project, topic, messages) {
     "Retrieved passages:",
     passages,
     "",
-    analysisContext(project.id, topic),
+    await analysisContext(project.id, topic),
     "",
     history ? `Conversation so far:\n${history}\n` : "",
     `Researcher's question: ${question}`,

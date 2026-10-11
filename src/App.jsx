@@ -1,61 +1,51 @@
 import { useCallback, useEffect, useState } from "react";
+import { BrowserRouter, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
-import Workspace from "./workspace/Workspace";
+import AppRoutes from "./routes/AppRoutes";
 import * as authService from "./services/authService";
 import { UNAUTHORIZED_EVENT } from "./services/apiClient";
 import { T, sans } from "./styles/tokens";
 
 /*
-  Top-level view switcher plus session handling.
+  Session handling. Routing itself lives in routes/AppRoutes.
+
   - On load, restore the session from the stored token.
-  - Public views: landing → login/signup. Authenticated: workspace.
-  - If the API rejects the token, drop the session and return to login.
+  - If the API rejects that token mid-session, drop it and return to login.
+  - Signing in or out navigates, so the URL always reflects the state.
 */
-export default function App() {
-  const [view, setView] = useState("landing");
+function AppShell() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     authService.me()
-      .then((u) => {
-        if (cancelled) return;
-        if (u) { setUser(u); setView("workspace"); }
-      })
+      .then((u) => { if (!cancelled && u) setUser(u); })
       .catch(() => { /* treat as signed out */ })
       .finally(() => { if (!cancelled) setRestoring(false); });
     return () => { cancelled = true; };
   }, []);
 
-  const signOut = useCallback(() => {
-    authService.logout();
-    setUser(null);
-    setView("landing");
-  }, []);
-
   useEffect(() => {
     function onUnauthorized() {
       setUser(null);
-      setView("login");
+      navigate("/login", { replace: true });
     }
     window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
-  }, []);
+  }, [navigate]);
 
-  function onAuthenticated(session) {
+  const onAuthenticated = useCallback((session) => {
     setUser(session.user);
-    setView("workspace");
-  }
+    navigate("/workspace", { replace: true });
+  }, [navigate]);
 
-  function go(next) {
-    // The workspace requires a session; everything else is public.
-    if (next === "workspace" && !user) return setView("login");
-    setView(next);
-  }
+  const onSignOut = useCallback(() => {
+    authService.logout();
+    setUser(null);
+    navigate("/", { replace: true });
+  }, [navigate]);
 
   if (restoring) {
     return (
@@ -66,8 +56,13 @@ export default function App() {
     );
   }
 
-  if (view === "workspace" && user) return <Workspace go={go} user={user} onSignOut={signOut} />;
-  if (view === "login") return <LoginPage go={go} onAuthenticated={onAuthenticated} />;
-  if (view === "signup") return <SignupPage go={go} onAuthenticated={onAuthenticated} />;
-  return <LandingPage go={go} />;
+  return <AppRoutes user={user} onAuthenticated={onAuthenticated} onSignOut={onSignOut} />;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
+  );
 }

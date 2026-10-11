@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2, RotateCcw, X } from "lucide-react";
 import TopNav from "./TopNav";
 import Sidebar from "./Sidebar";
@@ -20,7 +20,7 @@ import { T, serif, sans } from "../styles/tokens";
 
   dialog: null | { kind: "create" } | { kind: "edit", project } | { kind: "delete", project }
 */
-export default function Workspace({ go, user, onSignOut }) {
+export default function Workspace({ go, user, onSignOut, routeProjectId = null, onProjectChange }) {
   const ws = useWorkspace();
   const [section, setSection] = useState("overview");
   const [chatTopic, setChatTopic] = useState(null); // key into CHAT_SEEDS
@@ -31,8 +31,26 @@ export default function Workspace({ go, user, onSignOut }) {
 
   const closeDialog = () => setDialog(null);
 
+  /*
+    The URL is the source of truth for which project is open. Selecting
+    one navigates; an id in the path (including on a fresh page load or
+    a pasted link) is applied to the workspace state.
+  */
+  const { activeProjectId, selectProject: selectInState } = ws;
+  useEffect(() => {
+    if (routeProjectId && routeProjectId !== activeProjectId) {
+      selectInState(routeProjectId);
+    }
+  }, [routeProjectId, activeProjectId, selectInState]);
+
+  // Once projects load with none in the path, put the active one there.
+  useEffect(() => {
+    if (!routeProjectId && activeProjectId) onProjectChange?.(activeProjectId);
+  }, [routeProjectId, activeProjectId, onProjectChange]);
+
   function selectProject(id) {
     ws.selectProject(id);
+    onProjectChange?.(id);
     setChatTopic(null);
     setSidebarOpen(false);
     setMobileView("main");
@@ -47,7 +65,10 @@ export default function Workspace({ go, user, onSignOut }) {
 
   async function handleDialogSubmit(values) {
     if (dialog?.kind === "edit") await ws.updateProject(dialog.project.id, values);
-    else await ws.createProject(values);
+    else {
+      const created = await ws.createProject(values);
+      if (created) onProjectChange?.(created.id); // open the new project's URL
+    }
     closeDialog();
     setSidebarOpen(false);
   }
