@@ -73,7 +73,7 @@ export async function addDocuments(project, files) {
     }
     room -= 1;
 
-    const id = new crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+    const id = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
     const storedName = `${id}.${ext}`;
     await fsp.mkdir(config.uploadDir, { recursive: true });
     await fsp.writeFile(path.join(config.uploadDir, storedName), file.buffer);

@@ -13,9 +13,9 @@ const upload = multer({
 });
 
 /** GET → { documents: [...] } */
-router.get("/", (req, res) => {
-  res.json({ documents: listDocuments(req.project.id) });
-});
+router.get("/", asyncHandler(async (req, res) => {
+  res.json({ documents: await listDocuments(req.project.id) });
+}));
 
 /** POST multipart `files[]` → 201 { documents: [...accepted], rejected: [...reasons] } */
 router.post("/", upload.array("files", config.maxFilesPerProject), asyncHandler(async (req, res) => {
