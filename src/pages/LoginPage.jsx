@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import AuthShell from "../components/AuthShell";
 import Button from "../components/Button";
@@ -12,7 +13,7 @@ import { T, serif, sans } from "../styles/tokens";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function LoginPage({ go, onAuthenticated }) {
+export default function LoginPage({ onAuthenticated }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -103,7 +104,7 @@ export default function LoginPage({ go, onAuthenticated }) {
 
       <p className="text-center text-[13px] mt-7" style={{ ...sans, color: T.black, opacity: 0.7 }}>
         Don't have an account?{" "}
-        <button type="button" className="cursor-pointer" style={{ color: T.ink }} onClick={() => go("signup")}>Create one</button>
+        <Link to="/signup" className="cursor-pointer" style={{ color: T.ink }}>Create one</Link>
       </p>
     </AuthShell>
   );

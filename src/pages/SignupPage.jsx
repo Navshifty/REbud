@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import AuthShell from "../components/AuthShell";
 import Button from "../components/Button";
@@ -23,7 +24,7 @@ function ReqRow({ met, label }) {
   );
 }
 
-export default function SignupPage({ go, onAuthenticated }) {
+export default function SignupPage({ onAuthenticated }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -110,7 +111,7 @@ export default function SignupPage({ go, onAuthenticated }) {
       </form>
       <p className="text-center text-[13px] mt-7" style={{ ...sans, color: T.black, opacity: 0.7 }}>
         Already have an account?{" "}
-        <button type="button" className="cursor-pointer" style={{ color: T.ink }} onClick={() => go("login")}>Log in</button>
+        <Link to="/login" className="cursor-pointer" style={{ color: T.ink }}>Log in</Link>
       </p>
     </AuthShell>
   );

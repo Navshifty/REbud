@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, ClipboardList, FileText, GitBranch, ScanSearch, Shield, Target } from "lucide-react";
 import Button from "../components/Button";
 import { T, serif, sans, mono } from "../styles/tokens";
@@ -15,7 +16,7 @@ const CAPABILITIES = [
 ];
 
 /* Public marketing/landing screen. `go(view)` navigates between top-level views. */
-export default function LandingPage({ go }) {
+export default function LandingPage() {
   return (
     <div style={{ background: T.cream, minHeight: "100vh" }}>
       <nav className="flex items-center justify-between px-6 md:px-10 py-6 border-b" style={{ borderColor: T.line }}>
@@ -23,7 +24,7 @@ export default function LandingPage({ go }) {
         <div className="flex items-center gap-5 md:gap-8">
           <a href="#capabilities" className="hidden sm:inline text-[13.5px]" style={{ ...sans, color: T.black, opacity: 0.7 }}>Capabilities</a>
           <a href="#method" className="hidden sm:inline text-[13.5px]" style={{ ...sans, color: T.black, opacity: 0.7 }}>Method</a>
-          <Button onClick={() => go("login")}>Get Started</Button>
+          <Link to="/login"><Button>Get Started</Button></Link>
         </div>
       </nav>
 
@@ -39,8 +40,8 @@ export default function LandingPage({ go }) {
             strengthen a proposal before it goes to review.
           </p>
           <div className="flex items-center flex-wrap gap-4">
-            <Button onClick={() => go("login")}>Get Started <ArrowRight size={15} /></Button>
-            <Button variant="secondary" onClick={() => go("login")}>Explore REbud</Button>
+            <Link to="/login"><Button>Get Started <ArrowRight size={15} /></Button></Link>
+            <Link to="/login"><Button variant="secondary">Explore REbud</Button></Link>
           </div>
         </div>
         <div className="col-span-12 lg:col-span-5 flex items-start justify-end pt-3">
