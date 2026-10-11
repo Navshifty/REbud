@@ -32,10 +32,14 @@ export const config = {
   maxFilesPerProject: 20,
   acceptedExtensions: ["pdf", "docx", "txt", "csv", "md"],
 
-  // Research-intelligence pipeline (Phase 4). Without an API key the
-  // server serves labelled sample results instead of calling the model.
+  // Research-intelligence pipeline (Phase 4). Without a key for the
+  // selected provider the server serves labelled sample results instead
+  // of calling a model.
+  llmProvider: (process.env.LLM_PROVIDER ?? "gemini").toLowerCase(), // gemini | anthropic
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-opus-5",
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-pro",
   analysisEffort: process.env.ANALYSIS_EFFORT ?? "high", // low | medium | high | xhigh | max
   enableWebSearch: process.env.ENABLE_WEB_SEARCH === "true",
   // How much document text to hand the model per analysis request. Beyond
@@ -44,4 +48,12 @@ export const config = {
   chunkChars: Number(process.env.CHUNK_CHARS ?? 1800),
 };
 
-export const llmEnabled = () => Boolean(config.anthropicApiKey);
+/** The API key for whichever provider is selected, or "" when unset. */
+export const providerKey = () =>
+  (config.llmProvider === "anthropic" ? config.anthropicApiKey : config.geminiApiKey);
+
+/** The model id for whichever provider is selected. */
+export const providerModel = () =>
+  (config.llmProvider === "anthropic" ? config.anthropicModel : config.geminiModel);
+
+export const llmEnabled = () => Boolean(providerKey());

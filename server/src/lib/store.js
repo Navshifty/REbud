@@ -11,32 +11,54 @@ import { config } from "../config.js";
   swapping in a real database in Phase 5 is a local change.
 */
 
-const cache = new Map(); // collection -> array
+const cache = new Map(); // collection -> { rows, mtimeMs }
 const writeQueues = new Map(); // collection -> Promise chain
 
 function filePath(collection) {
   return path.join(config.dataDir, `${collection}.json`);
 }
 
+function mtimeOf(collection) {
+  try {
+    return fs.statSync(filePath(collection)).mtimeMs;
+  } catch (err) {
+    if (err.code === "ENOENT") return 0;
+    throw err;
+  }
+}
+
+/*
+  Reads are served from memory, but the file is re-read whenever it has
+  changed on disk. Without that check a second process (a maintenance
+  script, a manual edit) writes a change this process never sees — and
+  then silently overwrites it on the next save.
+*/
 function load(collection) {
-  if (cache.has(collection)) return cache.get(collection);
+  const current = mtimeOf(collection);
+  const cached = cache.get(collection);
+  if (cached && cached.mtimeMs === current) return cached.rows;
+
   let rows = [];
   try {
     rows = JSON.parse(fs.readFileSync(filePath(collection), "utf8"));
   } catch (err) {
     if (err.code !== "ENOENT") throw err;
   }
-  cache.set(collection, rows);
+  cache.set(collection, { rows, mtimeMs: current });
   return rows;
 }
 
 async function persist(collection) {
-  const rows = cache.get(collection) ?? [];
+  const entry = cache.get(collection);
+  const rows = entry?.rows ?? [];
   const run = async () => {
     await fsp.mkdir(config.dataDir, { recursive: true });
     const tmp = `${filePath(collection)}.tmp`;
     await fsp.writeFile(tmp, JSON.stringify(rows, null, 2));
     await fsp.rename(tmp, filePath(collection));
+    // Record the mtime we just produced, so our own write doesn't look
+    // like someone else's change on the next read.
+    if (entry) entry.mtimeMs = mtimeOf(collection);
   };
   const previous = writeQueues.get(collection) ?? Promise.resolve();
   const next = previous.then(run, run);
@@ -76,7 +98,7 @@ export function repository(collection) {
       const rows = load(collection);
       const keep = rows.filter((r) => !predicate(r));
       const removed = rows.length - keep.length;
-      cache.set(collection, keep);
+      cache.set(collection, { rows: keep, mtimeMs: mtimeOf(collection) });
       if (removed) await persist(collection);
       return removed;
     },

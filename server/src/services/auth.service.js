@@ -17,11 +17,18 @@ function issueToken(user) {
   return jwt.sign({ sub: user.id, email: user.email }, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
 }
 
+export const MIN_PASSWORD_LENGTH = 8;
+
+/*
+  Length is the only requirement. Forced composition rules (an uppercase,
+  a symbol) push people towards predictable substitutions without adding
+  real strength, which is why NIST SP 800-63B advises against them. A
+  length floor is kept because it is the part that resists guessing.
+*/
 export function validatePassword(password) {
-  if (typeof password !== "string" || password.length < 8) return "Password must be at least 8 characters.";
-  if (!/[A-Z]/.test(password)) return "Password needs an uppercase letter.";
-  if (!/[a-z]/.test(password)) return "Password needs a lowercase letter.";
-  if (!/[^A-Za-z0-9]/.test(password)) return "Password needs a special character.";
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
   return null;
 }
 

@@ -8,10 +8,12 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "set-password": "node scripts/set-password.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
+    "@google/genai": "^2.28.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import AuthShell from "../components/AuthShell";
 import Button from "../components/Button";
@@ -7,6 +7,7 @@ import Field from "../components/Field";
 import TextInput from "../components/TextInput";
 import GoogleButton from "../components/GoogleButton";
 import * as authService from "../services/authService";
+import { MIN_PASSWORD_LENGTH } from "../services/authService";
 import { T, serif, sans } from "../styles/tokens";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,17 +34,13 @@ export default function SignupPage({ go, onAuthenticated }) {
   const [serverError, setServerError] = useState(null); // { field, message }
   const [notice, setNotice] = useState(null);
 
-  const reqs = useMemo(() => ({
-    length: password.length >= 8,
-    upper: /[A-Z]/.test(password),
-    lower: /[a-z]/.test(password),
-    special: /[^A-Za-z0-9]/.test(password),
-  }), [password]);
+  // Length only, matching the server. Composition rules add friction
+  // without adding strength, so they aren't enforced.
+  const longEnough = password.length >= MIN_PASSWORD_LENGTH;
 
   const validEmail = EMAIL_RE.test(email);
   const matches = confirm.length > 0 && confirm === password;
-  const allReqsMet = Object.values(reqs).every(Boolean);
-  const canSubmit = name.trim().length > 1 && validEmail && allReqsMet && matches && !submitting;
+  const canSubmit = name.trim().length > 1 && validEmail && longEnough && matches && !submitting;
 
   async function submit(e) {
     e.preventDefault();
@@ -93,11 +90,8 @@ export default function SignupPage({ go, onAuthenticated }) {
             </button>
           </div>
         </Field>
-        <div className="grid grid-cols-2 gap-y-1.5 mb-4 -mt-2" aria-label="Password requirements">
-          <ReqRow met={reqs.length} label="8 characters" />
-          <ReqRow met={reqs.upper} label="Uppercase letter" />
-          <ReqRow met={reqs.lower} label="Lowercase letter" />
-          <ReqRow met={reqs.special} label="Special character" />
+        <div className="mb-4 -mt-2" aria-label="Password requirements">
+          <ReqRow met={longEnough} label={`At least ${MIN_PASSWORD_LENGTH} characters`} />
         </div>
         <Field label="Confirm password" error={touched && !matches ? "Passwords do not match." : null}>
           <TextInput
