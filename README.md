@@ -33,7 +33,8 @@ Still ahead (Phase 5): database, OAuth, tests, CI/CD and deployment.
 - Tailwind CSS v4 via PostCSS
 - lucide-react icons
 - ESLint
-- API: Node 20+, Express 5, JSON Web Tokens, bcryptjs, multer (in `server/`)
+- API: Node 20+, Express 5, MongoDB + Mongoose, JSON Web Tokens, bcryptjs,
+  multer (in `server/`)
 - Research intelligence: Anthropic SDK (Claude), pdf-parse, mammoth
 
 ## Getting started
@@ -48,13 +49,22 @@ npm run dev
 Other scripts: `npm run build`, `npm run preview`, `npm run lint`
 (lint covers `server/` too).
 
-**API** (in a second terminal):
+**API** (in a second terminal). Needs MongoDB running locally; the
+defaults assume `mongodb://127.0.0.1:27017`, and `MONGODB_URI` in
+`server/.env` points elsewhere (an Atlas cluster, say):
 
 ```bash
 cd server
 npm install
 cp .env.example .env
 npm run dev
+```
+
+Coming from an older checkout that used the JSON-file store, carry the
+data across once (idempotent, and `--dry` previews it):
+
+```bash
+npm run migrate
 ```
 
 Then point the frontend at it: copy `.env.example` to `.env` in the repo
@@ -83,9 +93,11 @@ needs `Authorization: Bearer <token>`.
 | GET, POST | `/projects/:id/analysis` | Module states / start modules (202, then poll) |
 | POST | `/projects/:id/chat` | `{ topic?, messages }` → assistant reply |
 
-Persistence is a JSON-file store under `server/data/` and uploads live in
-`server/uploads/` (both git-ignored). A database replaces the store in
-Phase 5 without touching routes or services.
+Persistence is MongoDB via Mongoose. Schemas live in `server/src/models/`
+and carry the validation rules (required fields, lengths, enums, a unique
+index on email), so they hold however a document is written. Uploaded
+files live on disk under `server/uploads/` (git-ignored); only their
+metadata is in the database.
 
 ## Project structure
 
@@ -109,12 +121,15 @@ server/
 │   ├── app.js          # Express app (CORS, JSON, routes, error handling)
 │   ├── index.js        # Entry point
 │   ├── config.js       # Environment config (.env)
-│   ├── lib/            # JSON-file store, text chunking, BM25 retrieval, errors
+│   ├── db/             # MongoDB connection lifecycle
+│   ├── models/         # Mongoose schemas: User, Project, Document, Analysis
+│   ├── lib/            # text chunking, BM25 retrieval, validation, errors
 │   ├── middleware/     # requireAuth (JWT), loadProject (ownership), errors
 │   ├── routes/         # auth, projects, documents, analysis, chat
 │   ├── services/       # extraction, corpus, llm, pipeline, and one per route group
 │   └── data/           # Analysis prompts + JSON schemas; sample fallback content
-├── data/               # JSON store (git-ignored)
+├── scripts/            # set-password, migrate-json-to-mongo
+├── data/               # legacy JSON data, kept for migration (git-ignored)
 └── uploads/            # Stored documents and extracted text (git-ignored)
 ```
 
@@ -164,8 +179,8 @@ for numbers.
    analysis job endpoints, chat; frontend wired with a mock fallback. ✅
 4. **Research intelligence** — PDF/DOCX extraction, chunking, retrieval,
    structured Claude analysis with citation tracking and provenance. ✅
-5. **Production engineering** — database, OAuth, security, tests,
-   logging, CI/CD, deployment.
+5. **Production engineering** — MongoDB and client-side routing done;
+   OAuth, API security, tests, logging, CI/CD and deployment remain.
 
 ## Contributing workflow
 
