@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../../config.js";
-import { LlmError } from "./errors.js";
+import { LlmError, cleanDetail } from "./errors.js";
 
 /*
   Anthropic (Claude) provider.
@@ -23,9 +23,13 @@ function translateError(err) {
   if (err instanceof LlmError) return err;
   if (err instanceof Anthropic.AuthenticationError) return new LlmError(`The ${LABEL} API key was rejected. Check ANTHROPIC_API_KEY in server/.env.`, { cause: err });
   if (err instanceof Anthropic.RateLimitError) return new LlmError(`${LABEL} is rate-limited right now. Try again in a moment.`, { retryable: true, cause: err });
-  if (err instanceof Anthropic.BadRequestError) return new LlmError(`The analysis request was rejected: ${err.message}`, { cause: err });
+  if (err instanceof Anthropic.BadRequestError) return new LlmError(`${LABEL} rejected the analysis request. ${cleanDetail(err.message)}`.trim(), { cause: err });
   if (err instanceof Anthropic.APIConnectionError) return new LlmError(`Couldn't reach the ${LABEL} API.`, { retryable: true, cause: err });
-  if (err instanceof Anthropic.APIError) return new LlmError(`${LABEL} API error (${err.status}): ${err.message}`, { retryable: err.status >= 500, cause: err });
+  if (err instanceof Anthropic.APIError) {
+    const overloaded = err.status === 503;
+    const lead = overloaded ? `${LABEL} is overloaded right now. This is usually brief.` : `${LABEL} error (${err.status}).`;
+    return new LlmError(`${lead} ${cleanDetail(err.message)}`.trim(), { retryable: err.status >= 500 || err.status === 429, cause: err });
+  }
   return new LlmError(err?.message || "Analysis failed.", { cause: err });
 }
 
