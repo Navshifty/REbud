@@ -1,5 +1,5 @@
 import { config } from "../config.js";
-import { documents } from "../lib/store.js";
+import { Document } from "../models/Document.js";
 import { chunkText } from "../lib/text.js";
 import { buildIndex, search } from "../lib/retrieval.js";
 import { readDocumentText } from "./document.service.js";
@@ -20,9 +20,7 @@ function corpusKey(docs) {
 }
 
 export async function getCorpus(projectId) {
-  const docs = documents
-    .find((d) => d.projectId === projectId && d.extraction === "extracted")
-    .sort((a, b) => a.createdAt - b.createdAt);
+  const docs = await Document.find({ project: projectId, extraction: "extracted" }).sort({ createdAt: 1 });
   const key = corpusKey(docs);
   const cached = cache.get(projectId);
   if (cached && cached.key === key) return cached.corpus;

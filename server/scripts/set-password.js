@@ -4,7 +4,7 @@
 
   For development only: there is no email-based reset yet, so this is how
   you recover an account on your own machine. The password is bcrypt-hashed
-  before it touches disk and is never written to the data files in plain text.
+  before it reaches the database and is never stored in plain text.
 
   Usage:
     node scripts/set-password.js <email> <new-password>   non-interactive
@@ -15,7 +15,8 @@
 */
 import readline from "node:readline";
 import bcrypt from "bcryptjs";
-import { users } from "../src/lib/store.js";
+import { connectDb, disconnectDb } from "../src/db/connect.js";
+import { User } from "../src/models/User.js";
 import { validatePassword } from "../src/services/auth.service.js";
 
 const email = (process.argv[2] ?? "").trim().toLowerCase();
@@ -26,10 +27,14 @@ if (!email) {
   process.exit(1);
 }
 
-const user = users.findOne((u) => u.email === email);
+await connectDb();
+
+const user = await User.findOne({ email });
 if (!user) {
+  const known = (await User.find().select("email")).map((u) => u.email);
   console.error(`No account found for ${email}.`);
-  console.error(`Known accounts: ${users.all().map((u) => u.email).join(", ") || "none"}`);
+  console.error(`Known accounts: ${known.join(", ") || "none"}`);
+  await disconnectDb();
   process.exit(1);
 }
 
@@ -47,7 +52,6 @@ function askHidden(question) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
     let muted = false;
     rl._writeToOutput = (str) => {
-      // Echo the prompt itself, mask everything typed after it.
       if (!muted || str.includes(question)) rl.output.write(str);
       else rl.output.write("*");
     };
@@ -62,14 +66,13 @@ function askHidden(question) {
 
 async function readPassword() {
   if (inlinePassword !== undefined) return inlinePassword;
-
   console.log(`Setting a new password for ${user.name} <${user.email}>.`);
-  console.log("Requirements: 8+ characters, with an uppercase letter, a lowercase letter and a symbol.\n");
-
+  console.log("Requirement: at least 8 characters.\n");
   const password = await askHidden("New password: ");
   const confirm = await askHidden("Confirm password: ");
   if (confirm !== password) {
     console.error("Passwords do not match.");
+    await disconnectDb();
     process.exit(1);
   }
   return password;
@@ -80,15 +83,20 @@ try {
   const problem = validatePassword(password);
   if (problem) {
     console.error(problem);
+    await disconnectDb();
     process.exit(1);
   }
-  await users.update(user.id, { passwordHash: await bcrypt.hash(password, 10) });
+  user.passwordHash = await bcrypt.hash(password, 10);
+  await user.save();
   console.log(`\nPassword updated for ${user.email}. Log in at http://localhost:5173`);
   if (inlinePassword !== undefined) {
     console.log("Tip: clear it from your shell history (PowerShell: Clear-History).");
   }
-  process.exit(0);
 } catch (err) {
   console.error(err.message);
+  await disconnectDb();
   process.exit(1);
 }
+
+await disconnectDb();
+process.exit(0);

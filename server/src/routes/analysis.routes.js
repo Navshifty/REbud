@@ -5,10 +5,10 @@ import { getAnalysis, runModules } from "../services/analysis.service.js";
 // Mounted at /api/projects/:projectId/analysis with req.project loaded.
 const router = Router({ mergeParams: true });
 
-/** GET → { modules: { overview: {status,data,error,updatedAt}, ... } } */
-router.get("/", (req, res) => {
-  res.json({ modules: getAnalysis(req.project.id) });
-});
+/** GET → { modules: { overview: {status,data,error,updatedAt,meta}, ... } } */
+router.get("/", asyncHandler(async (req, res) => {
+  res.json({ modules: await getAnalysis(req.project.id) });
+}));
 
 /**
  * POST { modules: ["gaps", ...] } → 202 { modules, started }
